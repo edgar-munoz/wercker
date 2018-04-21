@@ -248,6 +248,38 @@ func NewGitOptions(c util.Settings, e *util.Environment, globalOpts *GlobalOptio
 	}, nil
 }
 
+// KeenOptions for our metrics
+type KeenOptions struct {
+	*GlobalOptions
+	KeenProjectID       string
+	KeenProjectWriteKey string
+	ShouldKeenMetrics   bool
+}
+
+// NewKeenOptions constructor
+func NewKeenOptions(c util.Settings, e *util.Environment, globalOpts *GlobalOptions) (*KeenOptions, error) {
+	keenMetrics, _ := c.Bool("keen-metrics")
+	keenProjectWriteKey, _ := c.String("keen-project-write-key")
+	keenProjectID, _ := c.String("keen-project-id")
+
+	if keenMetrics {
+		if keenProjectWriteKey == "" {
+			return nil, errors.New("keen-project-write-key is required")
+		}
+
+		if keenProjectID == "" {
+			return nil, errors.New("keen-project-id is required")
+		}
+	}
+
+	return &KeenOptions{
+		GlobalOptions:       globalOpts,
+		KeenProjectID:       keenProjectID,
+		KeenProjectWriteKey: keenProjectWriteKey,
+		ShouldKeenMetrics:   keenMetrics,
+	}, nil
+}
+
 // ReporterOptions for our reporting
 type ReporterOptions struct {
 	*GlobalOptions
@@ -295,6 +327,7 @@ type PipelineOptions struct {
 	*AWSOptions
 	// *DockerOptions
 	*GitOptions
+	*KeenOptions
 	*ReporterOptions
 
 	// TODO(termie): i'd like to remove this, it is only used in a couple
@@ -483,6 +516,11 @@ func NewPipelineOptions(c util.Settings, e *util.Environment) (*PipelineOptions,
 		return nil, err
 	}
 
+	keenOpts, err := NewKeenOptions(c, e, globalOpts)
+	if err != nil {
+		return nil, err
+	}
+
 	reporterOpts, err := NewReporterOptions(c, e, globalOpts)
 	if err != nil {
 		return nil, err
@@ -562,6 +600,7 @@ func NewPipelineOptions(c util.Settings, e *util.Environment) (*PipelineOptions,
 		AWSOptions:    awsOpts,
 		// DockerOptions:   dockerOpts,
 		GitOptions:      gitOpts,
+		KeenOptions:     keenOpts,
 		ReporterOptions: reporterOpts,
 
 		HostEnv: e,
@@ -906,82 +945,5 @@ func NewWerckerDockerOptions(c util.Settings, e *util.Environment) (*WerckerDock
 	return &WerckerDockerOptions{
 		GlobalOptions:            globalOpts,
 		WerckerContainerRegistry: wcr,
-	}, nil
-}
-
-type WerckerStepOptions struct {
-	*GlobalOptions
-	Owner   string
-	StepDir string
-}
-
-func NewWerckerStepOptions(c util.Settings, e *util.Environment) (*WerckerStepOptions, error) {
-	globalOpts, err := NewGlobalOptions(c, e)
-	if err != nil {
-		return nil, err
-	}
-
-	owner, _ := c.String("owner")
-
-	return &WerckerStepOptions{
-		GlobalOptions: globalOpts,
-		Owner:         owner,
-	}, nil
-}
-
-// WerckerRunnerOptions -
-type WerckerRunnerOptions struct {
-	*GlobalOptions
-	RunnerName     string
-	RunnerGroup    string
-	RunnerOrgs     string
-	RunnerApps     string
-	Workflows      string
-	StorePath      string
-	LoggerPath     string
-	BearerToken    string
-	DockerEndpoint string
-	NumRunners     int
-	Polling        int
-	AllOption      bool
-}
-
-// NewExternalRunnerOptions -
-func NewExternalRunnerOptions(c util.Settings, e *util.Environment) (*WerckerRunnerOptions, error) {
-	globalOpts, err := NewGlobalOptions(c, e)
-	if err != nil {
-		return nil, err
-	}
-	rname, _ := c.String("name")
-	rgroup, _ := c.String("group")
-	rorgs, _ := c.String("orgs")
-	flows, _ := c.String("workflows")
-	rapps, _ := c.String("apps")
-	spath, _ := c.String("storepath")
-	lpath, _ := c.String("logpath")
-	norun, _ := c.Int("runners")
-	token, _ := c.String("token")
-	pfreq, _ := c.Int("poll-frequency")
-	isall, _ := c.Bool("all")
-	dhost, _ := c.String("docker-host")
-
-	if dhost == "" {
-		dhost = "unix:///var/run/docker.sock"
-	}
-
-	return &WerckerRunnerOptions{
-		GlobalOptions:  globalOpts,
-		BearerToken:    token,
-		RunnerName:     rname,
-		RunnerGroup:    rgroup,
-		RunnerOrgs:     rorgs,
-		RunnerApps:     rapps,
-		Workflows:      flows,
-		StorePath:      spath,
-		LoggerPath:     lpath,
-		NumRunners:     norun,
-		Polling:        pfreq,
-		AllOption:      isall,
-		DockerEndpoint: dhost,
 	}, nil
 }

@@ -1,4 +1,4 @@
-//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
+//   Copyright 2016 Wercker Holding BV
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/wercker/wercker/util"
-	"golang.org/x/net/context"
 )
 
 // DockerOptions for our docker client
@@ -38,17 +37,16 @@ type Options struct {
 	MemorySwap        int64
 	KernelMemory      int64
 	CleanupImage      bool
-	NetworkName       string
 }
 
-func guessAndUpdateDockerOptions(ctx context.Context, opts *Options, e *util.Environment) {
+func guessAndUpdateDockerOptions(opts *Options, e *util.Environment) {
 	if opts.Host != "" {
 		return
 	}
 
 	logger := util.RootLogger().WithField("Logger", "docker")
 	// f := &util.Formatter{opts.GlobalOptions.ShowColors}
-	f := &util.Formatter{ShowColors: false}
+	f := &util.Formatter{false}
 
 	// Check the unix socket, default on linux
 	// This will fail instantly so don't bother with the goroutine
@@ -58,11 +56,11 @@ func guessAndUpdateDockerOptions(ctx context.Context, opts *Options, e *util.Env
 
 	if _, err := os.Stat(unixSocket); err == nil {
 		unixSocket = fmt.Sprintf("unix://%s", unixSocket)
-		client, err := NewOfficialDockerClient(&Options{
+		client, err := NewDockerClient(&Options{
 			Host: unixSocket,
 		})
 		if err == nil {
-			_, err = client.ServerVersion(ctx)
+			_, err = client.Version()
 			if err == nil {
 				opts.Host = unixSocket
 				return
@@ -110,7 +108,7 @@ func guessAndUpdateDockerOptions(ctx context.Context, opts *Options, e *util.Env
 }
 
 // NewDockerOptions constructor
-func NewOptions(ctx context.Context, c util.Settings, e *util.Environment) (*Options, error) {
+func NewOptions(c util.Settings, e *util.Environment) (*Options, error) {
 	dockerHost, _ := c.String("docker-host")
 	dockerTLSVerify, _ := c.String("docker-tls-verify")
 	dockerCertPath, _ := c.String("docker-cert-path")
@@ -123,7 +121,6 @@ func NewOptions(ctx context.Context, c util.Settings, e *util.Environment) (*Opt
 	dockerMemorySwap, _ := c.Int("docker-memory-swap")
 	dockerKernelMemory, _ := c.Int("docker-kernel-memory")
 	dockerCleanupImage, _ := c.Bool("docker-cleanup-image")
-	dockerNetworkName, _ := c.String("docker-network")
 
 	speculativeOptions := &Options{
 		Host:              dockerHost,
@@ -138,12 +135,11 @@ func NewOptions(ctx context.Context, c util.Settings, e *util.Environment) (*Opt
 		MemorySwap:        int64(dockerMemorySwap) * 1024 * 1024,
 		KernelMemory:      int64(dockerKernelMemory) * 1024 * 1024,
 		CleanupImage:      dockerCleanupImage,
-		NetworkName:       dockerNetworkName,
 	}
 
 	// We're going to try out a few settings and set DockerHost if
 	// one of them works, it they don't we'll get a nice error when
 	// requireDockerEndpoint triggers later on
-	guessAndUpdateDockerOptions(ctx, speculativeOptions, e)
+	guessAndUpdateDockerOptions(speculativeOptions, e)
 	return speculativeOptions, nil
 }

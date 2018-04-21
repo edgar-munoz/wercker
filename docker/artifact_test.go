@@ -1,4 +1,4 @@
-//   Copyright © 2016, 2018, Oracle and/or its affiliates.  All rights reserved.
+//   Copyright 2016 Wercker Holding BV
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"github.com/wercker/wercker/util"
-	"golang.org/x/net/context"
 )
 
 type ArtifactSuite struct {
@@ -35,121 +34,123 @@ func TestArtifactSuite(t *testing.T) {
 }
 
 func (s *ArtifactSuite) TestDockerFileCollectorSingle() {
-	ctx := context.Background()
-	client := DockerOrSkip(ctx, s.T())
+	client := DockerOrSkip(s.T())
 
-	container, err := TempBusybox(ctx, client)
+	container, err := TempBusybox(client)
 	s.Nil(err)
-	defer container.Remove(ctx)
+	defer container.Remove()
 
 	dfc := NewDockerFileCollector(client, container.ID)
 
-	archive, err := dfc.Collect(ctx, "/etc/alpine-release")
-	s.Nil(err)
-
+	archive, errs := dfc.Collect("/etc/alpine-release")
 	var b bytes.Buffer
-	err = <-archive.SingleBytes("alpine-release", &b)
-	s.Nil(err)
+
+	select {
+	case err := <-archive.SingleBytes("alpine-release", &b):
+		s.Nil(err)
+	case err := <-errs:
+		s.Nil(err)
+		s.T().FailNow()
+	}
 
 	s.Equal("3.1.4\n", b.String())
 }
 
 func (s *ArtifactSuite) TestDockerFileCollectorSingleNotFound() {
-	ctx := context.Background()
-	client := DockerOrSkip(ctx, s.T())
+	client := DockerOrSkip(s.T())
 
-	container, err := TempBusybox(ctx, client)
+	container, err := TempBusybox(client)
 	s.Nil(err)
-	defer container.Remove(ctx)
+	defer container.Remove()
 
 	dfc := NewDockerFileCollector(client, container.ID)
 
 	// Fail first from docker client
-	archive1, err1 := dfc.Collect(ctx, "/notfound/file")
-	s.Equal(err1, util.ErrEmptyTarball)
-	if err1 == nil {
-		defer archive1.Close()
+	archive, errs := dfc.Collect("/notfound/file")
+	var b bytes.Buffer
+	select {
+	case <-archive.SingleBytes("file", &b):
+		s.T().FailNow()
+	case err := <-errs:
+		s.Equal(err, util.ErrEmptyTarball)
 	}
+
 	// Or from archive
-	archive2, err2 := dfc.Collect(ctx, "/etc/issue") // this file exists
-	s.Nil(err2)
-	if err2 == nil {
-		defer archive2.Close()
-	}
+	archive, errs = dfc.Collect("/etc/issue")
 	var b2 bytes.Buffer
-	err3 := <-archive2.SingleBytes("notfound", &b2) // this does not exist
-	s.Equal(util.ErrEmptyTarball, err3)
+	select {
+	case err := <-archive.SingleBytes("notfound", &b2):
+		s.Equal(err, util.ErrEmptyTarball)
+	case <-errs:
+		s.T().FailNow()
+	}
 }
 
 func (s *ArtifactSuite) TestDockerFileCollectorMulti() {
-	ctx := context.Background()
-	client := DockerOrSkip(ctx, s.T())
+	client := DockerOrSkip(s.T())
 
-	container, err1 := TempBusybox(ctx, client)
-	if err1 != nil {
-		println(err1.Error())
-	}
-	s.Nil(err1)
-	defer container.Remove(ctx)
+	container, err := TempBusybox(client)
+	s.Nil(err)
+	defer container.Remove()
 
 	dfc := NewDockerFileCollector(client, container.ID)
 
-	archive, err2 := dfc.Collect(ctx, "/etc/apk")
-	s.Nil(err2)
-	defer archive.Close()
-
+	archive, errs := dfc.Collect("/etc/apk")
 	var b bytes.Buffer
-	err3 := <-archive.SingleBytes("apk/arch", &b)
-	s.Nil(err3)
+
+	select {
+	case err := <-archive.SingleBytes("apk/arch", &b):
+		s.Nil(err)
+	case <-errs:
+		s.T().FailNow()
+	}
 
 	check := "x86_64\n"
 	s.Equal(check, b.String())
 }
 
 func (s *ArtifactSuite) TestDockerFileCollectorMultiEmptyTarball() {
-	ctx := context.Background()
-	client := DockerOrSkip(ctx, s.T())
+	client := DockerOrSkip(s.T())
 
-	container, err1 := TempBusybox(ctx, client)
-	s.Nil(err1)
-	defer container.Remove(ctx)
+	container, err := TempBusybox(client)
+	s.Nil(err)
+	defer container.Remove()
 
 	dfc := NewDockerFileCollector(client, container.ID)
 
-	archive, err2 := dfc.Collect(ctx, "/var/tmp")
-	s.Nil(err2)
-	defer archive.Close()
+	archive, errs := dfc.Collect("/var/tmp")
 
-	tmp, err3 := ioutil.TempDir("", "test-")
-	s.Nil(err3)
+	tmp, err := ioutil.TempDir("", "test-")
+	s.Nil(err)
 	defer os.RemoveAll(tmp)
 
-	err4 := <-archive.Multi("tmp", tmp, maxArtifactSize)
-	s.Equal(err4, util.ErrEmptyTarball)
+	select {
+	case err := <-archive.Multi("tmp", tmp, maxArtifactSize):
+		s.Equal(err, util.ErrEmptyTarball)
+	case <-errs:
+		s.FailNow()
+	}
 }
 
 func (s *ArtifactSuite) TestDockerFileCollectorMultiNotFound() {
-	ctx := context.Background()
-	client := DockerOrSkip(ctx, s.T())
+	client := DockerOrSkip(s.T())
 
-	container, err1 := TempBusybox(ctx, client)
-	s.Nil(err1)
-	defer container.Remove(ctx)
+	container, err := TempBusybox(client)
+	s.Nil(err)
+	defer container.Remove()
 
 	dfc := NewDockerFileCollector(client, container.ID)
 
-	archive, err2 := dfc.Collect(ctx, "/notfound")
-	s.Equal(err2, util.ErrEmptyTarball)
-	if err2 == nil {
-		defer archive.Close()
-	}
-	tmp, err3 := ioutil.TempDir("", "test-")
-	s.Nil(err3)
+	archive, errs := dfc.Collect("/notfound")
+
+	tmp, err := ioutil.TempDir("", "test-")
+	s.Nil(err)
 	defer os.RemoveAll(tmp)
 
-	// case <-archive.Multi("default", tmp, maxArtifactSize):
-	// 	s.FailNow()
-	// case err := <-errs:
-	// 	s.Equal(err, util.ErrEmptyTarball)
-	// }
+	select {
+	case <-archive.Multi("default", tmp, maxArtifactSize):
+		s.FailNow()
+	case err := <-errs:
+		s.Equal(err, util.ErrEmptyTarball)
+	}
 }

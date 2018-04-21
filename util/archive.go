@@ -1,4 +1,4 @@
-//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
+//   Copyright 2016 Wercker Holding BV
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -38,18 +38,11 @@ type ArchiveProcessor interface {
 // Archive holds the tarball stream and provides methods to manipulate it
 type Archive struct {
 	stream io.Reader
-	closer func()
 }
 
 // NewArchive constructor
-// If the reader needs to be closed after use then closer must be set to a func which will close the reader
-func NewArchive(stream io.Reader, closer func()) *Archive {
-	return &Archive{stream: stream, closer: closer}
-}
-
-// Close the archive
-func (a *Archive) Close() {
-	a.closer()
+func NewArchive(stream io.Reader) *Archive {
+	return &Archive{stream: stream}
 }
 
 // Tee the tar stream to your own writer

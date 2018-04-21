@@ -1,4 +1,4 @@
-//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
+//   Copyright 2016 Wercker Holding BV
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/fsnotify/fsnotify.v1"
+	"gopkg.in/fsnotify.v1"
 
 	"github.com/pborman/uuid"
 	"github.com/wercker/wercker/core"
@@ -80,18 +80,17 @@ func NewWatchStep(stepConfig *core.StepConfig, options *core.PipelineOptions, do
 }
 
 // InitEnv parses our data into our config
-func (s *WatchStep) InitEnv(env *util.Environment) error {
+func (s *WatchStep) InitEnv(env *util.Environment) {
 	if code, ok := s.data["code"]; ok {
 		s.Code = code
 	}
-	if reload, ok := s.data["reload"]; ok && reload != "" {
+	if reload, ok := s.data["reload"]; ok {
 		if v, err := strconv.ParseBool(reload); err == nil {
 			s.reload = v
 		} else {
-			return fmt.Errorf("%s is an invalid value for reload, error while validating: %s", reload, err.Error())
+			s.logger.Panic(err)
 		}
 	}
-	return nil
 }
 
 // Fetch NOP
@@ -265,7 +264,7 @@ func (s *WatchStep) Execute(ctx context.Context, sess *core.Session) (int, error
 		s.killProcesses(containerID, "INT")
 		return 0, nil
 	}
-	f := &util.Formatter{ShowColors: s.options.GlobalOptions.ShowColors}
+	f := &util.Formatter{s.options.GlobalOptions.ShowColors}
 	s.logger.Info(f.Info("Reloading on file changes"))
 	doCmd := func() {
 		err := sess.Send(ctx, false, "set +e", s.Code)
@@ -334,7 +333,7 @@ func (s *WatchStep) CollectFile(a, b, c string, dst io.Writer) error {
 }
 
 // CollectArtifact NOP
-func (s *WatchStep) CollectArtifact(context.Context, string) (*core.Artifact, error) {
+func (s *WatchStep) CollectArtifact(string) (*core.Artifact, error) {
 	return nil, nil
 }
 

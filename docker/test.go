@@ -1,4 +1,4 @@
-//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
+//   Copyright 2016 Wercker Holding BV
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -16,30 +16,22 @@ package dockerlocal
 
 import (
 	"os"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/pkg/errors"
-
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
+	"github.com/fsouza/go-dockerclient"
 	"github.com/wercker/wercker/util"
-	"golang.org/x/net/context"
 )
 
 // DockerOrSkip checks for a docker container and skips the test
 // if one is not available
-func DockerOrSkip(ctx context.Context, t *testing.T) *client.Client {
+func DockerOrSkip(t *testing.T) *DockerClient {
 	if os.Getenv("SKIP_DOCKER_TEST") == "true" {
 		t.Skip("$SKIP_DOCKER_TEST=true, skipping test")
 		return nil
 	}
 
-	client, err := NewOfficialDockerClient(MinimalDockerOptions())
-	_, err = client.Ping(ctx)
+	client, err := NewDockerClient(MinimalDockerOptions())
+	err = client.Ping()
 	if err != nil {
 		t.Skip("Docker not available, skipping test")
 		return nil
@@ -48,68 +40,58 @@ func DockerOrSkip(ctx context.Context, t *testing.T) *client.Client {
 }
 
 func MinimalDockerOptions() *Options {
-	ctx := context.Background()
 	opts := &Options{}
-	guessAndUpdateDockerOptions(ctx, opts, util.NewEnvironment(os.Environ()...))
+	guessAndUpdateDockerOptions(opts, util.NewEnvironment(os.Environ()...))
 	return opts
 }
 
 type ContainerRemover struct {
-	*container.ContainerCreateCreatedBody
-	client *client.Client
+	*docker.Container
+	client *DockerClient
 }
 
-func TempBusybox(ctx context.Context, client *client.Client) (*ContainerRemover, error) {
-	_, _, err := client.ImageInspectWithRaw(ctx, "alpine:3.1")
+func TempBusybox(client *DockerClient) (*ContainerRemover, error) {
+	_, err := client.InspectImage("alpine")
 	if err != nil {
-		readCloser, err := client.ImagePull(ctx, "alpine:3.1", types.ImagePullOptions{})
+		options := docker.PullImageOptions{
+			Repository: "alpine",
+			Tag:        "3.1",
+		}
+
+		err = client.PullImage(options, docker.AuthConfiguration{})
 		if err != nil {
 			return nil, err
 		}
-		defer readCloser.Close()
 	}
 
-	// It seems it takes some time for the new image to become available for container creation,
-	// so if the first attempt at starting the container fails with "No such image" we try again
-	timeout := time.After(10 * time.Second)
-	tick := time.Tick(500 * time.Millisecond)
-	for {
-		select {
-		case <-timeout:
-			return nil, errors.New("Timed out trying to start container")
-		case <-tick:
-			container, err := client.ContainerCreate(ctx,
-				&container.Config{
-					Image:           "alpine:3.1",
-					Cmd:             []string{"/bin/sh"},
-					Tty:             false,
-					OpenStdin:       true,
-					AttachStdin:     true,
-					AttachStdout:    true,
-					AttachStderr:    true,
-					NetworkDisabled: true,
-				}, &container.HostConfig{}, &network.NetworkingConfig{}, "temp-busybox")
-			if err == nil {
-				return &ContainerRemover{ContainerCreateCreatedBody: &container, client: client}, nil
-			} else if strings.HasPrefix(err.Error(), "Error: No such image:") {
-				// try again
-			} else if strings.HasPrefix(err.Error(), "Error response from daemon: Conflict. The container name \"/temp-busybox\" is already in use by container") {
-				// need to delete container left over from previous test run
-				err := client.ContainerRemove(ctx, "temp-busybox", types.ContainerRemoveOptions{RemoveVolumes: true})
-				if err != nil {
-					return nil, err
-				}
-				// try again
-			} else {
-				return nil, err
-			}
-		}
+	container, err := client.CreateContainer(
+		docker.CreateContainerOptions{
+			Name: "temp-busybox",
+			Config: &docker.Config{
+				Image:           "alpine:3.1",
+				Tty:             false,
+				OpenStdin:       true,
+				Cmd:             []string{"/bin/sh"},
+				AttachStdin:     true,
+				AttachStdout:    true,
+				AttachStderr:    true,
+				NetworkDisabled: true,
+			},
+		},
+	)
+	if err != nil {
+		return nil, err
 	}
+
+	return &ContainerRemover{Container: container, client: client}, nil
 }
 
-func (c *ContainerRemover) Remove(ctx context.Context) error {
+func (c *ContainerRemover) Remove() {
 	if c == nil {
-		return nil
+		return
 	}
-	return c.client.ContainerRemove(ctx, c.ContainerCreateCreatedBody.ID, types.ContainerRemoveOptions{RemoveVolumes: true})
+	c.client.RemoveContainer(docker.RemoveContainerOptions{
+		ID:            c.Container.ID,
+		RemoveVolumes: true,
+	})
 }

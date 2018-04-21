@@ -1,4 +1,4 @@
-//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
+//   Copyright 2016 Wercker Holding BV
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -71,9 +71,8 @@ func NewStoreContainerStep(stepConfig *core.StepConfig, options *core.PipelineOp
 }
 
 // InitEnv preps our env
-func (s *StoreContainerStep) InitEnv(env *util.Environment) error {
+func (s *StoreContainerStep) InitEnv(env *util.Environment) {
 	// NOP
-	return nil
 }
 
 // Fetch NOP
@@ -196,7 +195,7 @@ func (s *StoreContainerStep) CollectFile(a, b, c string, dst io.Writer) error {
 }
 
 // CollectArtifact return an artifact pointing at the exported thing we made
-func (s *StoreContainerStep) CollectArtifact(context.Context, string) (*core.Artifact, error) {
+func (s *StoreContainerStep) CollectArtifact(string) (*core.Artifact, error) {
 	return s.artifact, nil
 }
 

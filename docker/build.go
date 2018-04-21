@@ -1,4 +1,4 @@
-//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
+//   Copyright 2016 Wercker Holding BV
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import (
 
 	"github.com/wercker/wercker/core"
 	"github.com/wercker/wercker/util"
-	"golang.org/x/net/context"
 )
 
 type DockerBuild struct {
@@ -94,7 +93,7 @@ func (b *DockerBuild) DockerMessage() string {
 }
 
 // CollectArtifact copies the artifacts associated with the Build.
-func (b *DockerBuild) CollectArtifact(ctx context.Context, containerID string) (*core.Artifact, error) {
+func (b *DockerBuild) CollectArtifact(containerID string) (*core.Artifact, error) {
 	artificer := NewArtificer(b.options, b.dockerOptions)
 
 	// Ensure we have the host directory
@@ -122,10 +121,10 @@ func (b *DockerBuild) CollectArtifact(ctx context.Context, containerID string) (
 	}
 
 	// Get the output dir, if it is empty grab the source dir.
-	fullArtifact, err := artificer.Collect(ctx, artifact)
+	fullArtifact, err := artificer.Collect(artifact)
 	if err != nil {
 		if err == util.ErrEmptyTarball {
-			fullArtifact, err = artificer.Collect(ctx, sourceArtifact)
+			fullArtifact, err = artificer.Collect(sourceArtifact)
 			if err != nil {
 				return nil, err
 			}

@@ -1,4 +1,4 @@
-//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
+//   Copyright 2016 Wercker Holding BV
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@ package dockerlocal
 
 import (
 	"archive/tar"
-	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
+	"os/signal"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -33,12 +33,13 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/image"
 	"github.com/docker/docker/layer"
+	dockersignal "github.com/docker/docker/pkg/signal"
+	"github.com/docker/docker/pkg/term"
 	"github.com/docker/go-connections/nat"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/google/shlex"
 	digest "github.com/opencontainers/go-digest"
 	"github.com/pborman/uuid"
-	"github.com/pkg/errors"
 	"github.com/wercker/docker-check-access"
 	"github.com/wercker/wercker/auth"
 	"github.com/wercker/wercker/core"
@@ -51,47 +52,10 @@ const (
 	// so the value can be anything so long as it's not empty.
 	DefaultDockerRegistryUsername = "token"
 	DefaultDockerCommand          = `/bin/sh -c "if [ -e /bin/bash ]; then /bin/bash; else /bin/sh; fi"`
-	NoPushConfirmationInStatus    = "Docker push failed to complete. Please check logs for any error condition.."
 )
 
-//TODO: The current fsouza/go-dockerclient does not contain structs for status messages emitted
-// from docker in case of push - therefore had to explicitly create these structs for better
-// usablity of code (instead of unmarshalling json to a map). Official docker client should contain
-// these structs(or equivalents) already and this code should be refactored to use those instead
-// having to maintain our own.
-
-//PushStatusAux : The "aux" component of status message
-type PushStatusAux struct {
-	Tag    string `json:"tag,omitempty"`
-	Digest string `json:"digest,omitempty"`
-	Size   int64  `json:"size,omitempty"`
-}
-
-//PushStatusProgressDetail : The "progressDetail" component of status message
-type PushStatusProgressDetail struct {
-	Current int64 `json:"current,omitempty"`
-	Total   int64 `json:"total,omitempty"`
-}
-
-//PushStatusErrorDetail : The "errorDetail" component of status message
-type PushStatusErrorDetail struct {
-	Message string `json:"message,omitempty"`
-	Code    string `json:"code,omitempty"`
-}
-
-//PushStatus : Status message from Push message
-type PushStatus struct {
-	Status         string                    `json:"status,omitempty"`
-	ID             string                    `json:"id,omitempty"`
-	Progress       string                    `json:"progress,omitempty"`
-	Error          string                    `json:"error,omitempty"`
-	Aux            *PushStatusAux            `json:"aux,omitempty"`
-	ProgressDetail *PushStatusProgressDetail `json:"progressDetail,omitempty"`
-	ErrorDetail    *PushStatusErrorDetail    `json:"errorDetail,omitempty"`
-}
-
-func RequireDockerEndpoint(ctx context.Context, options *Options) error {
-	client, err := NewOfficialDockerClient(options)
+func RequireDockerEndpoint(options *Options) error {
+	client, err := NewDockerClient(options)
 	if err != nil {
 		if err == docker.ErrInvalidEndpoint {
 			return fmt.Errorf(`The given Docker endpoint is invalid:
@@ -102,7 +66,7 @@ func RequireDockerEndpoint(ctx context.Context, options *Options) error {
 		}
 		return err
 	}
-	_, err = client.ServerVersion(ctx)
+	_, err = client.Version()
 	if err != nil {
 		if err == docker.ErrConnectionRefused {
 			return fmt.Errorf(`You don't seem to have a working Docker environment or wercker can't connect to the Docker endpoint:
@@ -124,6 +88,202 @@ func GenerateDockerID() (string, error) {
 	}
 
 	return hex.EncodeToString(b), nil
+}
+
+// DockerClient is our wrapper for docker.Client
+type DockerClient struct {
+	*docker.Client
+	logger *util.LogEntry
+}
+
+// NewDockerClient based on options and env
+func NewDockerClient(options *Options) (*DockerClient, error) {
+	dockerHost := options.Host
+	tlsVerify := options.TLSVerify
+
+	logger := util.RootLogger().WithField("Logger", "Docker")
+
+	var (
+		client *docker.Client
+		err    error
+	)
+
+	if tlsVerify == "1" {
+		// We're using TLS, let's locate our certs and such
+		// boot2docker puts its certs at...
+		dockerCertPath := options.CertPath
+
+		// TODO(termie): maybe fast-fail if these don't exist?
+		cert := path.Join(dockerCertPath, fmt.Sprintf("cert.pem"))
+		ca := path.Join(dockerCertPath, fmt.Sprintf("ca.pem"))
+		key := path.Join(dockerCertPath, fmt.Sprintf("key.pem"))
+		client, err = docker.NewVersionnedTLSClient(dockerHost, cert, key, ca, "")
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		client, err = docker.NewClient(dockerHost)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &DockerClient{Client: client, logger: logger}, nil
+}
+
+// RunAndAttach gives us a raw connection to a newly run container
+func (c *DockerClient) RunAndAttach(name string) error {
+	hostConfig := &docker.HostConfig{}
+	cmd, _ := shlex.Split(DefaultDockerCommand)
+	container, err := c.CreateContainer(
+		docker.CreateContainerOptions{
+			Name: uuid.NewRandom().String(),
+			Config: &docker.Config{
+				Image:        name,
+				Tty:          true,
+				OpenStdin:    true,
+				Cmd:          cmd,
+				AttachStdin:  true,
+				AttachStdout: true,
+				AttachStderr: true,
+				// NetworkDisabled: b.networkDisabled,
+				// Volumes: volumes,
+			},
+			HostConfig: hostConfig,
+		})
+	if err != nil {
+		return err
+	}
+	c.StartContainer(container.ID, hostConfig)
+
+	return c.AttachTerminal(container.ID)
+}
+
+// AttachInteractive starts an interactive session and runs cmd
+func (c *DockerClient) AttachInteractive(containerID string, cmd []string, initialStdin []string) error {
+
+	exec, err := c.CreateExec(docker.CreateExecOptions{
+		AttachStdin:  true,
+		AttachStdout: true,
+		AttachStderr: true,
+		Tty:          true,
+		Cmd:          cmd,
+		Container:    containerID,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// Dump any initial stdin then go into os.Stdin
+	readers := []io.Reader{}
+	for _, s := range initialStdin {
+		if s != "" {
+			readers = append(readers, strings.NewReader(s+"\n"))
+		}
+	}
+	readers = append(readers, os.Stdin)
+	stdin := io.MultiReader(readers...)
+
+	// This causes our ctrl-c's to be passed to the stuff in the terminal
+	var oldState *term.State
+	oldState, err = term.SetRawTerminal(os.Stdin.Fd())
+	if err != nil {
+		return err
+	}
+	defer term.RestoreTerminal(os.Stdin.Fd(), oldState)
+
+	// Handle resizes
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, dockersignal.SIGWINCH)
+	go func() {
+		for range sigchan {
+			c.ResizeTTY(exec.ID)
+		}
+	}()
+
+	err = c.StartExec(exec.ID, docker.StartExecOptions{
+		InputStream:  stdin,
+		OutputStream: os.Stdout,
+		ErrorStream:  os.Stderr,
+		Tty:          true,
+		RawTerminal:  true,
+	})
+
+	return err
+}
+
+// ResizeTTY resizes the tty size of docker connection so output looks normal
+func (c *DockerClient) ResizeTTY(execID string) error {
+	ws, err := term.GetWinsize(os.Stdout.Fd())
+	if err != nil {
+		c.logger.Debugln("Error getting term size: %s", err)
+		return err
+	}
+	err = c.ResizeExecTTY(execID, int(ws.Height), int(ws.Width))
+	if err != nil {
+		c.logger.Debugln("Error resizing term: %s", err)
+		return err
+	}
+	return nil
+}
+
+// AttachTerminal connects us to container and gives us a terminal
+func (c *DockerClient) AttachTerminal(containerID string) error {
+	c.logger.Println("Attaching to ", containerID)
+	opts := docker.AttachToContainerOptions{
+		Container:    containerID,
+		Logs:         true,
+		Stdin:        true,
+		Stdout:       true,
+		Stderr:       true,
+		Stream:       true,
+		InputStream:  os.Stdin,
+		ErrorStream:  os.Stderr,
+		OutputStream: os.Stdout,
+		RawTerminal:  true,
+	}
+
+	var oldState *term.State
+
+	oldState, err := term.SetRawTerminal(os.Stdin.Fd())
+	if err != nil {
+		return err
+	}
+	defer term.RestoreTerminal(os.Stdin.Fd(), oldState)
+
+	go func() {
+		err := c.AttachToContainer(opts)
+		if err != nil {
+			c.logger.Panicln("attach panic", err)
+		}
+	}()
+
+	_, err = c.WaitContainer(containerID)
+	return err
+}
+
+// ExecOne uses docker exec to run a command in the container
+func (c *DockerClient) ExecOne(containerID string, cmd []string, output io.Writer) error {
+	exec, err := c.CreateExec(docker.CreateExecOptions{
+		AttachStdin:  false,
+		AttachStdout: true,
+		AttachStderr: true,
+		Tty:          false,
+		Cmd:          cmd,
+		Container:    containerID,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = c.StartExec(exec.ID, docker.StartExecOptions{
+		OutputStream: output,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // DockerScratchPushStep creates a new image based on a scratch tarball and
@@ -171,7 +331,7 @@ func (s *DockerScratchPushStep) Execute(ctx context.Context, sess *core.Session)
 	dt := sess.Transport().(*DockerTransport)
 	containerID := dt.containerID
 
-	_, err := s.CollectArtifact(ctx, containerID)
+	_, err := s.CollectArtifact(containerID)
 	if err != nil {
 		return -1, err
 	}
@@ -406,7 +566,7 @@ func (s *DockerScratchPushStep) Execute(ctx context.Context, sess *core.Session)
 
 // CollectArtifact is copied from the build, we use this to get the layer
 // tarball that we'll include in the image tarball
-func (s *DockerScratchPushStep) CollectArtifact(ctx context.Context, containerID string) (*core.Artifact, error) {
+func (s *DockerScratchPushStep) CollectArtifact(containerID string) (*core.Artifact, error) {
 	artificer := NewArtificer(s.options, s.dockerOptions)
 
 	// Ensure we have the host directory
@@ -432,10 +592,10 @@ func (s *DockerScratchPushStep) CollectArtifact(ctx context.Context, containerID
 	}
 
 	// Get the output dir, if it is empty grab the source dir.
-	fullArtifact, err := artificer.Collect(ctx, artifact)
+	fullArtifact, err := artificer.Collect(artifact)
 	if err != nil {
 		if err == util.ErrEmptyTarball {
-			fullArtifact, err = artificer.Collect(ctx, sourceArtifact)
+			fullArtifact, err = artificer.Collect(sourceArtifact)
 			if err != nil {
 				return nil, err
 			}
@@ -472,10 +632,6 @@ type DockerPushStep struct {
 	logger        *util.LogEntry
 	workingDir    string
 	authenticator auth.Authenticator
-	// image (if set) is the tag of an existing image, and obtained by prepending the build ID to the specified image-name property
-	// if image is set then this image is tagged and pushed (equivalent to "docker push")
-	// if image is not set then the pipeline container is committed, tagged and pushed (classic behaviour)
-	image string
 }
 
 // NewDockerPushStep is a special step for doing docker pushes
@@ -621,13 +777,9 @@ func (s *DockerPushStep) configure(env *util.Environment) {
 	} else {
 		s.forceTags = true
 	}
-
-	if image, ok := s.data["image-name"]; ok {
-		s.image = s.options.RunID + env.Interpolate(image)
-	}
 }
 
-func (s *DockerPushStep) buildAutherOpts(env *util.Environment) (dockerauth.CheckAccessOptions, error) {
+func (s *DockerPushStep) buildAutherOpts(env *util.Environment) dockerauth.CheckAccessOptions {
 	opts := dockerauth.CheckAccessOptions{}
 	if username, ok := s.data["username"]; ok {
 		opts.Username = env.Interpolate(username)
@@ -691,12 +843,7 @@ func (s *DockerPushStep) buildAutherOpts(env *util.Environment) (dockerauth.Chec
 
 	// If user use Azure or AWS container registry we don't infer.
 	if opts.AzureClientSecret == "" && opts.AwsSecretKey == "" {
-		repository, registry, err := InferRegistryAndRepository(s.repository, opts.Registry, s.options)
-		if err != nil {
-			return dockerauth.CheckAccessOptions{}, err
-		}
-		s.repository = repository
-		opts.Registry = registry
+		s.repository, opts = InferRegistry(s.repository, opts, s.options)
 	}
 
 	// Set user and password automatically if using wercker registry
@@ -706,99 +853,36 @@ func (s *DockerPushStep) buildAutherOpts(env *util.Environment) (dockerauth.Chec
 		s.builtInPush = true
 	}
 
-	return opts, nil
+	return opts
 }
 
-//InferRegistryAndRepository infers the registry and repository to be used from input registry and repository.
-// 1. If no repository is specified, it is assumed that the user wants to push an image of current application
-//    for which  the build is running to wcr.io repository and therefore registry is inferred as
-//    https://wcr.io/v2 and repository as wcr.io/<application-owner>/<application-name>
-// 2. In case a repository is provided but no registry - registry is derived from the name of the domain (if any)
-//    from the registry - e.g. for a repository quay.io/<repo-owner>/<repo-name> - quay.io will be the registry host
-//    and https://quay.io/v2/ will be the registry url. In case the repository name does not contain a domain name -
-//    docker hub is assumed to be the registry and therefore any authorization with supplied username/password is carried
-//    out with docker hub.
-// 3. In case both repository and registry are provided -
-//    3(a) - In case registry provided points to a wrong url - we use registry inferred from the domain name(if any) prefixed
-//           to the repository. However in this case if no domain name is specified in repository - we return an error since
-//           user probably wanted to use this repository with a different registry and not docker hub and should be alerted
-//           that the registry url is invalid.In case registry url is valid - we evaluate scenarios 4(b) and 4(c)
-//    3(b) - In case no domain name is prefixed to the repository - we assume repository belongs to the registry specified
-//           and prefix domain name extracted from registry.
-//    3(c) - In case repository also contains a domain name - we check if domain name of registry and repository are same,
-//           we assume that user wanted to use the registry host as specified in repository and change the registry to point
-//           to domain name present in repository. If domain names in both registry and repository are same - no changes are
-//           made.
-func InferRegistryAndRepository(repository string, registry string, pipelineOptions *core.PipelineOptions) (inferredRepository string, inferredRegistry string, err error) {
-	_logger := util.RootLogger().WithFields(util.LogFields{"Logger": "Docker"})
+// InferRegistry infers the registry from the repository. If no registry is found
+// we fallback to Docker Hub registry.
+func InferRegistry(repository string, opts dockerauth.CheckAccessOptions, pipelineOptions *core.PipelineOptions) (string, dockerauth.CheckAccessOptions) {
 	if repository == "" {
-		inferredRepository = pipelineOptions.WerckerContainerRegistry.Host + "/" + pipelineOptions.ApplicationOwnerName + "/" + pipelineOptions.ApplicationName
-		inferredRegistry = pipelineOptions.WerckerContainerRegistry.String()
-		_logger.Infoln("No repository specified - using " + inferredRepository)
-		_logger.Infoln("username/password fields are ignored while using wcr.io registry, supplied authToken (if provided) will be used for authorization to wcr.io registry")
-		return inferredRepository, inferredRegistry, nil
+		repository = pipelineOptions.WerckerContainerRegistry.Host + "/" + pipelineOptions.ApplicationOwnerName + "/" + pipelineOptions.ApplicationName
 	}
 	// Docker repositories must be lowercase
-	inferredRepository = strings.ToLower(repository)
-	inferredRegistry = registry
-	x, err := reference.ParseNormalizedNamed(inferredRepository)
-	if err != nil {
-		return "", "", fmt.Errorf("%s is not a valid repository, error while validating repository name: %s", inferredRepository, err.Error())
-	}
-	domainFromRepository := reference.Domain(x)
-	registryInferredFromRepository := ""
-	if domainFromRepository != "docker.io" {
-		reg := &url.URL{Scheme: "https", Host: domainFromRepository, Path: "/v2"}
-		registryInferredFromRepository = reg.String() + "/"
-	}
+	repository = strings.ToLower(repository)
 
-	if len(strings.TrimSpace(inferredRegistry)) != 0 {
-		registryURLFromStepConfig, err := url.ParseRequestURI(inferredRegistry)
-		if err != nil {
-			_logger.Errorln("Invalid registry url specified: ", err.Error)
-			if registryInferredFromRepository != "" {
-				_logger.Infoln("Using registry url inferred from repository: " + registryInferredFromRepository)
-				inferredRegistry = registryInferredFromRepository
-			} else {
-				_logger.Errorln("Please specify valid registry parameter.If you intended to use docker hub as registry, you may omit registry parameter")
-				return "", "", fmt.Errorf("%s is not a valid registry URL, error: %s", inferredRegistry, err.Error())
-			}
+	if opts.Registry == "" {
+		x, _ := reference.ParseNormalizedNamed(repository)
+		domain := reference.Domain(x)
 
-		} else {
-			domainFromRegistryURL := registryURLFromStepConfig.Host
-			if len(strings.TrimSpace(domainFromRepository)) != 0 && domainFromRepository != "docker.io" {
-				if domainFromRegistryURL != domainFromRepository {
-					_logger.Infoln("Different registry hosts specified in repository: " + domainFromRepository + " and registry: " + domainFromRegistryURL)
-					inferredRegistry = registryInferredFromRepository
-					_logger.Infoln("Using registry inferred from repository: " + inferredRegistry)
-				}
-			} else {
-				inferredRepository = domainFromRegistryURL + "/" + inferredRepository
-				_logger.Infoln("Using repository inferred from registry: " + inferredRepository)
-			}
-
+		if domain != "docker.io" {
+			reg := &url.URL{Scheme: "https", Host: domain, Path: "/v2"}
+			opts.Registry = reg.String() + "/"
 		}
-	} else {
-		inferredRegistry = registryInferredFromRepository
 	}
-	return inferredRepository, inferredRegistry, nil
+	return repository, opts
 }
 
 // InitEnv parses our data into our config
-func (s *DockerPushStep) InitEnv(env *util.Environment) error {
+func (s *DockerPushStep) InitEnv(env *util.Environment) {
 	s.configure(env)
-	opts, err := s.buildAutherOpts(env)
-	if err != nil {
-		return err
-	}
-
-	auther, err := dockerauth.GetRegistryAuthenticator(opts)
-	if err != nil {
-		return err
-	}
-
+	opts := s.buildAutherOpts(env)
+	auther, _ := dockerauth.GetRegistryAuthenticator(opts)
 	s.authenticator = auther
-	return nil
 }
 
 // Fetch NOP
@@ -858,33 +942,27 @@ func (s *DockerPushStep) Execute(ctx context.Context, sess *core.Session) (int, 
 		Volumes:      s.volumes,
 	}
 
-	var imageID = s.image
-	// if image is specified then it is assumed to be the name or ID of an existing image
-	// if image is not specified then create a new image by committing the pipeline container
-	if imageID == "" {
-		commitOpts := docker.CommitContainerOptions{
-			Container:  containerID,
-			Repository: s.repository,
-			Author:     s.author,
-			Message:    s.message,
-			Run:        &config,
-			Tag:        s.tags[0],
-		}
-
-		s.logger.Debugln("Commit container:", containerID)
-		i, err := client.CommitContainer(commitOpts)
-		if err != nil {
-			return -1, err
-		}
-
-		if s.dockerOptions.CleanupImage {
-			defer cleanupImage(s.logger, client, s.repository, s.tags[0])
-		}
-
-		s.logger.WithField("Image", i).Debug("Commit completed")
-		imageID = i.ID
+	commitOpts := docker.CommitContainerOptions{
+		Container:  containerID,
+		Repository: s.repository,
+		Author:     s.author,
+		Message:    s.message,
+		Run:        &config,
+		Tag:        s.tags[0],
 	}
-	return s.tagAndPush(imageID, e, client)
+
+	s.logger.Debugln("Commit container:", containerID)
+	i, err := client.CommitContainer(commitOpts)
+	if err != nil {
+		return -1, err
+	}
+
+	if s.dockerOptions.CleanupImage {
+		defer cleanupImage(s.logger, client, s.repository, s.tags[0])
+	}
+
+	s.logger.WithField("Image", i).Debug("Commit completed")
+	return s.tagAndPush(i.ID, e, client)
 }
 
 func (s *DockerPushStep) buildTags() []string {
@@ -915,18 +993,11 @@ func (s *DockerPushStep) tagAndPush(imageID string, e *core.NormalizedEmitter, c
 			s.logger.Errorln("Failed to push:", err)
 			return 1, err
 		}
-		inactivityDuration := 5 * time.Minute
-		buf := new(bytes.Buffer)
-		mw := io.MultiWriter(w, buf)
 		pushOpts := docker.PushImageOptions{
-			Name:              s.repository,
-			OutputStream:      mw,
-			RawJSONStream:     true,
-			Tag:               tag,
-			InactivityTimeout: inactivityDuration,
-		}
-		if s.dockerOptions.CleanupImage {
-			defer cleanupImage(s.logger, client, s.repository, tag)
+			Name:          s.repository,
+			OutputStream:  w,
+			RawJSONStream: true,
+			Tag:           tag,
 		}
 		if !s.dockerOptions.Local {
 			auth := docker.AuthConfiguration{
@@ -939,41 +1010,11 @@ func (s *DockerPushStep) tagAndPush(imageID string, e *core.NormalizedEmitter, c
 				s.logger.Errorln("Failed to push:", err)
 				return 1, err
 			}
-			statusMessages := make([]PushStatus, 0)
-			dec := json.NewDecoder(bytes.NewReader(buf.Bytes()))
-			for {
-				var status PushStatus
-				if err := dec.Decode(&status); err == io.EOF {
-					break
-				} else if err != nil {
-					s.logger.Errorln("Failed to parse status outputs from docker push:", err)
-					break
-				}
-				statusMessages = append(statusMessages, status)
-			}
-			isContainerPushed := false
-			for _, statusMessage := range statusMessages {
-				if len(strings.TrimSpace(statusMessage.Error)) != 0 {
-					errorMessageToDisplay := statusMessage.Error
-					if statusMessage.ErrorDetail != nil {
-						errorMessageToDisplay = fmt.Sprintf("Push failed, Error Details: Code: %s, Message: %s", statusMessage.ErrorDetail.Code, statusMessage.ErrorDetail.Message)
-					}
-					s.logger.Errorln("Failed to push:", errorMessageToDisplay)
-					return 1, errors.New(errorMessageToDisplay)
-				}
-				if statusMessage.Aux != nil && statusMessage.Aux.Tag == tag {
-					s.logger.Println("Pushed container:", s.repository, tag, ",Digest:", statusMessage.Aux.Digest)
-					e.Emit(core.Logs, &core.LogsArgs{
-						Logs: fmt.Sprintf("\nPushed %s:%s\n", s.repository, tag),
-					})
-					isContainerPushed = true
-				}
-			}
-			if !isContainerPushed {
-				s.logger.Errorln("Failed to push tag:", tag, "Please check log messages")
-				return 1, errors.New(NoPushConfirmationInStatus)
-			}
+			s.logger.Println("Pushed container:", s.repository, s.tags)
 
+			if s.dockerOptions.CleanupImage {
+				defer cleanupImage(s.logger, client, s.repository, tag)
+			}
 		}
 	}
 	return 0, nil
@@ -1000,7 +1041,7 @@ func (s *DockerPushStep) CollectFile(a, b, c string, dst io.Writer) error {
 }
 
 // CollectArtifact NOP
-func (s *DockerPushStep) CollectArtifact(context.Context, string) (*core.Artifact, error) {
+func (s *DockerPushStep) CollectArtifact(string) (*core.Artifact, error) {
 	return nil, nil
 }
 

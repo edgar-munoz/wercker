@@ -1,4 +1,4 @@
-//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
+//   Copyright 2016 Wercker Holding BV
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -81,6 +81,7 @@ type Runner struct {
 	options       *core.PipelineOptions
 	dockerOptions *dockerlocal.Options
 	literalLogger *event.LiteralLogHandler
+	metrics       *event.MetricsEventHandler
 	reporter      *event.ReportHandler
 	getPipeline   pipelineGetter
 	logger        *util.LogEntry
@@ -112,6 +113,15 @@ func NewRunner(ctx context.Context, options *core.PipelineOptions, dockerOptions
 	}
 	l.ListenTo(e)
 
+	var mh *event.MetricsEventHandler
+	if options.ShouldKeenMetrics {
+		mh, err = event.NewMetricsHandler(options)
+		if err != nil {
+			logger.WithField("Error", err).Panic("Unable to MetricsHandler")
+		}
+		mh.ListenTo(e)
+	}
+
 	var r *event.ReportHandler
 	if options.ShouldReport {
 		r, err := event.NewReportHandler(options.ReporterHost, options.ReporterKey)
@@ -125,11 +135,12 @@ func NewRunner(ctx context.Context, options *core.PipelineOptions, dockerOptions
 		options:       options,
 		dockerOptions: dockerOptions,
 		literalLogger: l,
+		metrics:       mh,
 		reporter:      r,
 		getPipeline:   getPipeline,
 		logger:        logger,
 		emitter:       e,
-		formatter:     &util.Formatter{ShowColors: options.GlobalOptions.ShowColors},
+		formatter:     &util.Formatter{options.GlobalOptions.ShowColors},
 	}, nil
 }
 
@@ -153,15 +164,12 @@ func (p *Runner) EnsureCode() (string, error) {
 		return projectDir, nil
 	}
 
-	const copyingMessage = "Copying working directory to"
-
 	// If the target is a tarball fetch and build that
 	if p.options.ProjectURL != "" {
 		resp, err := util.Get(p.options.ProjectURL)
 		if err != nil {
 			return projectDir, err
 		}
-		p.logger.Printf(p.formatter.Info(copyingMessage, projectDir))
 		err = util.Untargzip(projectDir, resp.Body)
 		if err != nil {
 			return projectDir, err
@@ -212,7 +220,6 @@ func (p *Runner) EnsureCode() (string, error) {
 		}
 		copyOpts := &shutil.CopyTreeOptions{Ignore: ignoreFunc, CopyFunction: shutil.Copy, Symlinks: true}
 		os.Rename(projectDir, fmt.Sprintf("%s-%s", projectDir, uuid.NewRandom().String()))
-		p.logger.Printf(p.formatter.Info(copyingMessage, projectDir))
 		err = shutil.CopyTree(p.options.ProjectPath, projectDir, copyOpts)
 		if err != nil {
 			return projectDir, err
@@ -465,7 +472,7 @@ func (p *Runner) StartFullPipeline(options *core.PipelineOptions) *util.Finisher
 // the entire "Setup Environment" step.
 func (p *Runner) SetupEnvironment(runnerCtx context.Context) (*RunnerShared, error) {
 	shared := &RunnerShared{}
-	f := &util.Formatter{ShowColors: p.options.GlobalOptions.ShowColors}
+	f := &util.Formatter{p.options.GlobalOptions.ShowColors}
 	timer := util.NewTimer()
 
 	sr := &StepResult{
@@ -657,7 +664,7 @@ type StepResult struct {
 }
 
 // RunStep runs a step and tosses error if it fails
-func (p *Runner) RunStep(ctx context.Context, shared *RunnerShared, step core.Step, order int) (*StepResult, error) {
+func (p *Runner) RunStep(shared *RunnerShared, step core.Step, order int) (*StepResult, error) {
 	finisher := p.StartStep(shared, step, order)
 	sr := &StepResult{
 		Success:  false,
@@ -675,12 +682,7 @@ func (p *Runner) RunStep(ctx context.Context, shared *RunnerShared, step core.St
 		}
 	}
 
-	err := step.InitEnv(shared.pipeline.Env())
-	if err != nil {
-		sr.Message = err.Error()
-		return sr, fmt.Errorf("Step initEnv failed with error message: %s", err.Error())
-	}
-
+	step.InitEnv(shared.pipeline.Env())
 	p.logger.Debugln("Step Environment")
 	for _, pair := range step.Env().Ordered() {
 		p.logger.Debugln(" ", pair[0], pair[1])
@@ -721,7 +723,7 @@ func (p *Runner) RunStep(ctx context.Context, shared *RunnerShared, step core.St
 
 	// Grab artifacts if we want them
 	if p.options.ShouldArtifacts {
-		artifact, err := step.CollectArtifact(ctx, shared.containerID)
+		artifact, err := step.CollectArtifact(shared.containerID)
 		if err != nil {
 			return sr, err
 		}

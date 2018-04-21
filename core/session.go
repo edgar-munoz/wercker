@@ -199,26 +199,19 @@ func smartSplitLines(line, sentinel string) []string {
 		possibleSentinel := splitLines[len(splitLines)-2]
 		// And we expect a newline at the end
 		possibleSentinel = fmt.Sprintf("%s\n", possibleSentinel)
-
-		// does this string contain the sentinel?
-		sentPos := strings.Index(possibleSentinel, sentinel)
-
-		// If we found the sentinel, make sure it gets read as a separate line to anything that preceded it
-		if sentPos >= 0 {
+		foundExit, _ := checkLine(possibleSentinel, sentinel)
+		// If we found the exit code, make sure it gets read as a separate line
+		if foundExit {
 			// If we weren't the only line to begin with, add the rest
 			if len(splitLines) > 2 {
 				otherLines := strings.Join(splitLines[:len(splitLines)-2], "\n")
 				otherLines = fmt.Sprintf("%s\n", otherLines)
 				lines = append(lines, otherLines)
 			}
-			if sentPos > 0 {
-				// Add the characters before the sentinel on its own line
-				lines = append(lines, possibleSentinel[0:sentPos])
-			}
-			// add the sentinel (and whatever follows) on its own line
-			lines = append(lines, possibleSentinel[sentPos:])
+			// Add the line we split off
+			lines = append(lines, possibleSentinel)
 		} else {
-			// Otherwise a sentinel was not found so just return the whole thing
+			// Otherwise if no exit was found just return the whole thing
 			lines = append(lines, line)
 		}
 	} else {

@@ -42,10 +42,6 @@ type JSONMessageProcessor struct {
 // ProcessJSONMessage will take JSONMessage m and generate logs based on the
 // message and previous messages.
 func (s *JSONMessageProcessor) ProcessJSONMessage(m *jsonmessage.JSONMessage) string {
-	if m.Stream != "" {
-		return m.Stream
-	}
-
 	switch m.Status {
 	case "Extracting":
 		fallthrough
@@ -65,6 +61,7 @@ func (s *JSONMessageProcessor) ProcessJSONMessage(m *jsonmessage.JSONMessage) st
 	case "Image successfully pushed":
 		delete(s.progressMessages, m.ID)
 		s.message = m
+
 	default:
 		s.message = m
 	}
