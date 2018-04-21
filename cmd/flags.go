@@ -258,7 +258,7 @@ var (
 	}
 
 	ExternalRunnerConfigureFlags = []cli.Flag{
-		cli.StringFlag{Name: "update", Usage: "automatically update local image from remote repository"},
+		cli.StringFlag{Name: "pull", Usage: "authmatically update local image from remote repository"},
 	}
 
 	ExternalRunnerStartFlags = []cli.Flag{
