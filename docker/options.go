@@ -38,7 +38,6 @@ type Options struct {
 	MemorySwap        int64
 	KernelMemory      int64
 	CleanupImage      bool
-	NetworkName       string
 }
 
 func guessAndUpdateDockerOptions(ctx context.Context, opts *Options, e *util.Environment) {
@@ -123,7 +122,6 @@ func NewOptions(ctx context.Context, c util.Settings, e *util.Environment) (*Opt
 	dockerMemorySwap, _ := c.Int("docker-memory-swap")
 	dockerKernelMemory, _ := c.Int("docker-kernel-memory")
 	dockerCleanupImage, _ := c.Bool("docker-cleanup-image")
-	dockerNetworkName, _ := c.String("docker-network")
 
 	speculativeOptions := &Options{
 		Host:              dockerHost,
@@ -138,7 +136,6 @@ func NewOptions(ctx context.Context, c util.Settings, e *util.Environment) (*Opt
 		MemorySwap:        int64(dockerMemorySwap) * 1024 * 1024,
 		KernelMemory:      int64(dockerKernelMemory) * 1024 * 1024,
 		CleanupImage:      dockerCleanupImage,
-		NetworkName:       dockerNetworkName,
 	}
 
 	// We're going to try out a few settings and set DockerHost if
