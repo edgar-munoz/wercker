@@ -111,22 +111,6 @@ testScratchPush () {
   fi
 }
 
-testDockerNetworks () {
-  echo -n "testing docker-n-networks.."
-  testDir=$testsDir/docker-n-networks
-  logFile="${workingDir}/docker-n-networks.log"
-
-  $wercker build "$testDir" --docker-local --working-dir "$workingDir" &> "$logFile"
-  if [ $? -eq 0 ]; then
-    echo "passed"
-    return 0
-  else
-      echo 'failed'
-      cat "$logFile"
-      docker images
-      return 1
-  fi
-}
 
 runTests() {
 
@@ -171,7 +155,6 @@ runTests() {
 
   testDirectMount || return 1
   testScratchPush || return 1
-  testDockerNetworks || return 1
 
   # test runs locally but not in wercker build container
   #basicTest "shellstep" build --docker-local --enable-dev-steps "$testsDir/shellstep" || return 1
