@@ -1,5 +1,7 @@
 ## unreleased
 
+- Revert docker links to docker networks change, which was causing build issues (#397)
+
 ## v1.0.1205 (2018-04-20)
 
 - Changes for robust error handling and reporting in docker-push (#387)
