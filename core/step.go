@@ -1,4 +1,4 @@
-//   Copyright 2016 Wercker Holding BV
+//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -95,10 +95,10 @@ type Step interface {
 	// Actual methods
 	Fetch() (string, error)
 
-	InitEnv(*util.Environment)
+	InitEnv(*util.Environment) error
 	Execute(context.Context, *Session) (int, error)
 	CollectFile(string, string, string, io.Writer) error
-	CollectArtifact(string) (*Artifact, error)
+	CollectArtifact(context.Context, string) (*Artifact, error)
 	// TODO(termie): don't think this needs to be universal
 	ReportPath(...string) string
 }
@@ -481,12 +481,12 @@ func (s *ExternalStep) CollectFile(containerID, path, name string, dst io.Writer
 }
 
 // CollectArtifact noop
-func (s *ExternalStep) CollectArtifact(containerID string) (*Artifact, error) {
+func (s *ExternalStep) CollectArtifact(ctx context.Context, containerID string) (*Artifact, error) {
 	return nil, nil
 }
 
 // InitEnv sets up the internal environment for the Step.
-func (s *ExternalStep) InitEnv(env *util.Environment) {
+func (s *ExternalStep) InitEnv(env *util.Environment) error {
 	a := [][]string{
 		[]string{"WERCKER_STEP_ROOT", s.GuestPath()},
 		[]string{"WERCKER_STEP_ID", s.safeID},
@@ -521,6 +521,8 @@ func (s *ExternalStep) InitEnv(env *util.Environment) {
 		key = strings.ToUpper(key)
 		s.Env().Add(key, value)
 	}
+
+	return nil
 }
 
 // CachedName returns a name suitable for caching

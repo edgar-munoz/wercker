@@ -1,4 +1,4 @@
-box: golang:1.7
+box: golang:1.10
 no-response-timeout: 15
 
 build:
@@ -6,11 +6,15 @@ build:
   steps:
     - install-packages:
         checkpoint: pkgs
-        packages: openssh-client pkg-config libsystemd-journal-dev
+        packages: openssh-client pkg-config libsystemd-dev
 
     - script:
         name: install govendor
         code: go get -u github.com/kardianos/govendor
+    
+    - script:
+        name: install dependencies
+        code: govendor sync
 
     - script:
         name: go vet
@@ -20,12 +24,8 @@ build:
     #     exclude: vendor
 
     - script:
-        name: install dependencies
-        code: govendor sync
-
-    - script:
         name: go test
-        code: govendor test +local
+        code: govendor test -v +local
 
     - script:
         name: clear out the build binaries

@@ -1,4 +1,4 @@
-//   Copyright 2016 Wercker Holding BV
+//   Copyright © 2016, 2018, Oracle and/or its affiliates.  All rights reserved.
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -18,8 +18,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/fsouza/go-dockerclient"
@@ -119,25 +121,6 @@ func NewDockerBox(boxConfig *core.BoxConfig, options *core.PipelineOptions, dock
 	}, nil
 }
 
-func (b *DockerBox) links() []string {
-	serviceLinks := []string{}
-
-	for _, service := range b.services {
-		serviceLinks = append(serviceLinks, service.Link())
-	}
-	b.logger.Debugln("Creating links:", serviceLinks)
-	return serviceLinks
-}
-
-// Link gives us the parameter to Docker to link to this box
-func (b *DockerBox) Link() string {
-	name := b.config.Name
-	if name == "" {
-		name = b.ShortName
-	}
-	return fmt.Sprintf("%s:%s", b.container.Name, name)
-}
-
 // GetName gets the box name
 func (b *DockerBox) GetName() string {
 	return b.Name
@@ -207,18 +190,16 @@ func (b *DockerBox) binds(env *util.Environment) ([]string, error) {
 
 // RunServices runs the services associated with this box
 func (b *DockerBox) RunServices(ctx context.Context, env *util.Environment) error {
-	links := []string{}
 
 	// TODO(termie): terrible hack, sorry world
 	ctxWithServiceCount := context.WithValue(ctx, "ServiceCount", len(b.services))
 
 	for _, service := range b.services {
 		b.logger.Debugln("Startinq service:", service.GetName())
-		_, err := service.Run(ctxWithServiceCount, env, links)
+		_, err := service.Run(ctxWithServiceCount, env)
 		if err != nil {
 			return err
 		}
-		links = append(links, service.Link())
 	}
 	return nil
 }
@@ -344,7 +325,27 @@ func (b *DockerBox) getContainerName() string {
 
 // Run creates the container and runs it.
 func (b *DockerBox) Run(ctx context.Context, env *util.Environment) (*docker.Container, error) {
+	dockerNetworkName, custom := b.GetDockerNetworkName()
+	if custom == false {
+		_, err := b.createDockerNetwork(dockerNetworkName)
+		if err != nil {
+			b.logger.Error("Error while creating network", err)
+			return nil, err
+		}
+	} else {
+		client := b.client
+		_, err := client.NetworkInfo(dockerNetworkName)
+		if err != nil {
+			b.logger.Error("Network does not exist", err)
+			return nil, err
+		}
+	}
+
 	err := b.RunServices(ctx, env)
+	if err != nil {
+		return nil, err
+	}
+	dockerEnvVar, err := b.prepareSvcDockerEnvVar(env)
 	if err != nil {
 		return nil, err
 	}
@@ -355,6 +356,7 @@ func (b *DockerBox) Run(ctx context.Context, env *util.Environment) (*docker.Con
 
 	// Import the environment
 	myEnv := dockerEnv(b.config.Env, env)
+	myEnv = append(myEnv, dockerEnvVar...)
 
 	var entrypoint []string
 	if b.entrypoint != "" {
@@ -389,9 +391,9 @@ func (b *DockerBox) Run(ctx context.Context, env *util.Environment) (*docker.Con
 
 	hostConfig := &docker.HostConfig{
 		Binds:        binds,
-		Links:        b.links(),
 		PortBindings: portBindings(portsToBind),
 		DNS:          b.dockerOptions.DNS,
+		NetworkMode:  dockerNetworkName,
 	}
 
 	conf := &docker.Config{
@@ -438,11 +440,11 @@ func (b *DockerBox) Run(ctx context.Context, env *util.Environment) (*docker.Con
 
 	b.logger.Debugln("Docker Container:", container.ID)
 
+	err = client.StartContainer(container.ID, hostConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	client.StartContainer(container.ID, hostConfig)
 	b.container = container
 	return container, nil
 }
@@ -486,6 +488,32 @@ func (b *DockerBox) Clean() error {
 		}
 	}
 
+	dockerNetworkName, custom := b.GetDockerNetworkName()
+	if custom == false {
+		dockerNetwork, err := client.NetworkInfo(dockerNetworkName)
+		if err != nil {
+			b.logger.Error("Unable to get network Info", err)
+			return err
+		}
+		for k, _ := range dockerNetwork.Containers {
+			err = client.DisconnectNetwork(dockerNetwork.ID, docker.NetworkConnectionOptions{
+				Container: k,
+				Force:     true,
+			})
+			if err != nil {
+				b.logger.Error("Error while disconnecting container from network", err)
+				return err
+			}
+		}
+		b.logger.WithFields(util.LogFields{
+			"Name": dockerNetworkName,
+		}).Debugln("Removing docker network ", dockerNetworkName)
+		err = client.RemoveNetwork(dockerNetworkName)
+		if err != nil {
+			b.logger.Error("Error while removing docker network", err)
+			return err
+		}
+	}
 	return nil
 }
 
@@ -550,7 +578,12 @@ func (b *DockerBox) Fetch(ctx context.Context, env *util.Environment) (*docker.I
 
 	// If user use Azure or AWS container registry we don't infer.
 	if b.config.Auth.AzureClientSecret == "" && b.config.Auth.AwsSecretKey == "" {
-		repo, b.config.Auth = InferRegistry(repo, b.config.Auth, b.options)
+		repository, registry, err := InferRegistryAndRepository(repo, b.config.Auth.Registry, b.options)
+		if err != nil {
+			return nil, err
+		}
+		repo = repository
+		b.config.Auth.Registry = registry
 	}
 
 	if b.config.Auth.Registry == b.options.WerckerContainerRegistry.String() {
@@ -654,4 +687,87 @@ func (b *DockerBox) ExportImage(options *ExportImageOptions) error {
 	client := b.client
 
 	return client.ExportImage(exportImageOptions)
+}
+
+// Create docker network
+func (b *DockerBox) createDockerNetwork(dockerNetworkName string) (*docker.Network, error) {
+	b.logger.Debugln("Creating docker network")
+	client := b.client
+	b.logger.WithFields(util.LogFields{
+		"Name": dockerNetworkName,
+	}).Debugln("Creating docker network :", dockerNetworkName)
+	return client.CreateNetwork(docker.CreateNetworkOptions{
+		Name:           dockerNetworkName,
+		CheckDuplicate: true,
+	})
+}
+
+// Prepares and return DockerEnvironment variables list.
+// For each service In case of docker links, docker creates some environment variables and inject them to box container.
+// Since docker links is replaced by docker network, these environment variables needs to be created manually.
+// Below environment variables created and injected to box container.
+// 01) <container name>_PORT_<port>_<protocol>_ADDR  - variable contains the IP Address.
+// 02) <container name>_PORT_<port>_<protocol>_PORT - variable contains just the port number.
+// 03) <container name>_PORT_<port>_<protocol>_PROTO - variable contains just the protocol.
+// 04) <container name>_ENV_<name> - Docker also exposes each Docker originated environment variable from the source container as an environment variable in the target.
+// 05) <container name>_PORT - variable contains the URL of the source container’s first exposed port. The ‘first’ port is defined as the exposed port with the lowest number.
+// 06) <container name>_NAME - variable is set for each service specified in wercker.yml.
+func (b *DockerBox) prepareSvcDockerEnvVar(env *util.Environment) ([]string, error) {
+	serviceEnv := []string{}
+	client := b.client
+	for _, service := range b.services {
+		serviceName := service.GetServiceAlias()
+		if containerID := service.GetID(); containerID != "" {
+			container, err := client.InspectContainer(containerID)
+			if err != nil {
+				b.logger.Error("Error while inspecting container", err)
+				return nil, err
+			}
+			ns := container.NetworkSettings
+			var serviceIPAddress string
+			for _, v := range ns.Networks {
+				serviceIPAddress = v.IPAddress
+				break
+			}
+			serviceEnv = append(serviceEnv, fmt.Sprintf("%s_NAME=/%s/%s", strings.ToUpper(serviceName), b.getContainerName(), serviceName))
+			lowestPort := math.MaxInt32
+			var protLowestPort string
+			for k, _ := range container.Config.ExposedPorts {
+				exposedPort := strings.Split(string(k), "/") //exposedPort[0]=portNum and exposedPort[1]=protocal(tcp/udp)
+				x, err := strconv.Atoi(exposedPort[0])
+				if err != nil {
+					b.logger.Error("Unable to convert string port to integer", err)
+					return nil, err
+				}
+				if lowestPort > x {
+					lowestPort = x
+					protLowestPort = exposedPort[1]
+				}
+				dockerEnvPrefix := fmt.Sprintf("%s_PORT_%s_%s", strings.ToUpper(serviceName), exposedPort[0], strings.ToUpper(exposedPort[1]))
+				serviceEnv = append(serviceEnv, fmt.Sprintf("%s=%s://%s:%s", dockerEnvPrefix, exposedPort[1], serviceIPAddress, exposedPort[0]))
+				serviceEnv = append(serviceEnv, fmt.Sprintf("%s_ADDR=%s", dockerEnvPrefix, serviceIPAddress))
+				serviceEnv = append(serviceEnv, fmt.Sprintf("%s_PORT=%s", dockerEnvPrefix, exposedPort[0]))
+				serviceEnv = append(serviceEnv, fmt.Sprintf("%s_PROTO=%s", dockerEnvPrefix, exposedPort[1]))
+			}
+			if protLowestPort != "" {
+				serviceEnv = append(serviceEnv, fmt.Sprintf("%s_PORT=%s://%s:%s", strings.ToUpper(serviceName), protLowestPort, serviceIPAddress, strconv.Itoa(lowestPort)))
+			}
+			for _, envVar := range container.Config.Env {
+				serviceEnv = append(serviceEnv, fmt.Sprintf("%s_ENV_%s", strings.ToUpper(serviceName), envVar))
+			}
+		}
+	}
+	b.logger.Debug("Exposed Service Evnironment variables", serviceEnv)
+	return serviceEnv, nil
+}
+
+// GetDockerNetworkName returns docker network name and custom flag for user passed docker-network
+func (b *DockerBox) GetDockerNetworkName() (string, bool) {
+	dockerNetworkName := b.dockerOptions.NetworkName
+	custom := true
+	if dockerNetworkName == "" {
+		dockerNetworkName = "wercker-" + b.options.RunID
+		custom = false
+	}
+	return dockerNetworkName, custom
 }

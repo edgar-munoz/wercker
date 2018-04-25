@@ -1,4 +1,5 @@
 vendor/*/
 wercker
 .wercker
+.werckertests
 .DS_STORE

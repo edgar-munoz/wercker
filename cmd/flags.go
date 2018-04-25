@@ -1,4 +1,4 @@
-//   Copyright 2016 Wercker Holding BV
+//   Copyright © 2016, 2018, Oracle and/or its affiliates.  All rights reserved.
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ var (
 		cli.IntFlag{Name: "docker-memory-reservation", Usage: "Set docker user memory soft limit in MB NOTIMPLEMENTED", Hidden: true},
 		cli.IntFlag{Name: "docker-kernel-memory", Usage: "Set docker kernel memory limit in MB NOTIMPLEMENTED", Hidden: true},
 		cli.BoolFlag{Name: "docker-cleanup-image", Usage: "Remove image from the Docker when finished pushing them", Hidden: true},
+		cli.StringFlag{Name: "docker-network", Value: "", Usage: "Docker network name.", Hidden: true},
 	}
 
 	// These flags control where we store local files
@@ -164,13 +165,6 @@ var (
 		cli.StringFlag{Name: "aws-region", Value: "us-east-1", Usage: "AWS region to use for artifact storage."},
 	}
 
-	// keen.io bits
-	KeenFlags = []cli.Flag{
-		cli.BoolFlag{Name: "keen-metrics", Usage: "Report metrics to keen.io.", Hidden: true},
-		cli.StringFlag{Name: "keen-project-write-key", Value: "", Usage: "Keen write key.", Hidden: true},
-		cli.StringFlag{Name: "keen-project-id", Value: "", Usage: "Keen project id.", Hidden: true},
-	}
-
 	// Wercker Reporter settings
 	ReporterFlags = []cli.Flag{
 		cli.BoolFlag{Name: "report", Usage: "Report logs back to wercker (requires build-id, wercker-host, wercker-token).", Hidden: true},
@@ -185,6 +179,11 @@ var (
 		cli.Float64Flag{Name: "no-response-timeout", Value: 5, Usage: "Timeout if no script output is received in this many minutes."},
 		cli.Float64Flag{Name: "command-timeout", Value: 25, Usage: "Timeout if command does not complete in this many minutes."},
 		cli.StringFlag{Name: "wercker-yml", Value: "", Usage: "Specify a specific yaml file.", EnvVar: "WERCKER_YML_FILE"},
+	}
+
+	// Steps options
+	StepPublishFlags = []cli.Flag{
+		cli.StringFlag{Name: "owner", Value: "", Usage: "owner of the step, leave blank to use the token owner"},
 	}
 
 	PullFlagSet = [][]cli.Flag{
@@ -245,13 +244,31 @@ var (
 
 	WerckerInternalFlagSet = [][]cli.Flag{
 		InternalPathFlags,
-		KeenFlags,
 		ReporterFlags,
 	}
 
 	WerckerDockerFlagSet = [][]cli.Flag{
 		AuthFlags,
 		WerckerFlags,
+	}
+
+	ExternalRunnerCommonFlags = []cli.Flag{
+		cli.StringFlag{Name: "name", Usage: "specify a unique name for active runner(s))"},
+		cli.StringFlag{Name: "group", Usage: "specify the group name for starting runner(s)"},
+	}
+
+	ExternalRunnerStartFlags = []cli.Flag{
+		cli.StringFlag{Name: "name", Usage: "specify an instance name for runner(s)"},
+		cli.StringFlag{Name: "group", Usage: "specify the group name for runner(s)"},
+		cli.StringFlag{Name: "orgs", Usage: "comma separated list of organization names"},
+		cli.StringFlag{Name: "apps", Usage: "comma separated list of application names, format: org-name/app-name for each. "},
+		cli.StringFlag{Name: "workflows", Usage: "comma separated list of workflows, format: org-name/app-name/workflow-name for each."},
+		cli.StringFlag{Name: "storepath", Usage: "local file system path for storing runner output"},
+		cli.StringFlag{Name: "logpath", Usage: "local file system path for storing log files"},
+		cli.IntFlag{Name: "runners", Value: 1, Usage: "number of runners to start, default is one"},
+		cli.IntFlag{Name: "poll-frequency", Value: 15, Usage: "number of seconds between runner polling for a job"},
+		cli.StringFlag{Name: "token", Usage: "bearer token for external runner", EnvVar: "WERCKER_RUNNER_TOKEN"},
+		cli.BoolFlag{Name: "all", Usage: "specify that all jobs allowed to the user are eligible for selection by this runner"},
 	}
 )
 

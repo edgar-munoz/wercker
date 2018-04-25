@@ -1,4 +1,4 @@
-//   Copyright 2016 Wercker Holding BV
+//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -57,8 +57,8 @@ type Pipeline interface {
 	// Methods
 	CommonEnv() [][]string     // base
 	InitEnv(*util.Environment) // impl
-	CollectArtifact(string) (*Artifact, error)
-	CollectCache(string) error
+	CollectArtifact(context.Context, string) (*Artifact, error)
+	CollectCache(context.Context, string) error
 	LocalSymlink()
 	SetupGuest(context.Context, *Session) error
 	ExportEnvironment(context.Context, *Session) error
@@ -191,7 +191,7 @@ func (p *BasePipeline) SetupGuest(sessionCtx context.Context, sess *Session) err
 	defer sess.ShowLogs()
 
 	timer := util.NewTimer()
-	f := &util.Formatter{p.options.GlobalOptions.ShowColors}
+	f := &util.Formatter{ShowColors: p.options.GlobalOptions.ShowColors}
 
 	cmds := []string{}
 

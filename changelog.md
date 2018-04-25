@@ -1,6 +1,35 @@
 ## unreleased
 
-- Revert to 1062 (#392)
+## v1.0.1205 (2018-04-20)
+
+- Changes for robust error handling and reporting in docker-push (#387)
+- Replace docker links with docker network (#382)
+- Change some docker API calls to use the official Docker client (#385) 
+
+## v1.0.1201 (2018-04-16)
+
+- Update azure client to allow docker-push in all regions (#381)
+
+## v1.0.1196(2018-04-11)
+
+- Fixes and additional properties for internal/docker-build step (#372)
+
+## v1.0.1195(2018-04-10)
+
+- Fix for correctly inferring regsitry and repoistory from step inputs (#375) 
+- Fix "go build" and "wercker build" on golang 1.10 (#374)
+
+## v1.0.1189(2018-04-04)
+
+- Fix status reporting for docker push (#371)
+
+## v1.0.1183 (2018-03-29)
+
+- New docker-build step and enhanded docker-push step (#362)
+
+## v1.0.1153 (2018-02-27)
+
+- Remove Keen dependencies (#354)
 
 ## v1.0.1062 (2017-11-28)
 

@@ -4,10 +4,10 @@ box:
 
 services:
   - name: red1
-    id: sutoiku/redis
+    id: redis
     cmd: redis-server
   - name: red2
-    id: sutoiku/redis
+    id: redis
     cmd: redis-server
 
 build:

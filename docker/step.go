@@ -1,4 +1,4 @@
-//   Copyright 2016 Wercker Holding BV
+//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"github.com/fsouza/go-dockerclient"
 	"github.com/wercker/wercker/core"
 	"github.com/wercker/wercker/util"
+	"golang.org/x/net/context"
 )
 
 func NewStep(config *core.StepConfig, options *core.PipelineOptions, dockerOptions *Options) (core.Step, error) {
@@ -32,8 +33,14 @@ func NewStep(config *core.StepConfig, options *core.PipelineOptions, dockerOptio
 	if config.ID == "internal/docker-scratch-push" {
 		return NewDockerScratchPushStep(config, options, dockerOptions)
 	}
+	if config.ID == "internal/docker-build" {
+		return NewDockerBuildStep(config, options, dockerOptions)
+	}
 	if config.ID == "internal/store-container" {
 		return NewStoreContainerStep(config, options, dockerOptions)
+	}
+	if config.ID == "internal/publish-step" {
+		return NewPublishStep(config, options, dockerOptions)
 	}
 	if strings.HasPrefix(config.ID, "internal/") {
 		if !options.EnableDevSteps {
@@ -108,7 +115,7 @@ func (s *DockerStep) CollectFile(containerID, path, name string, dst io.Writer) 
 }
 
 // CollectArtifact copies the artifacts associated with the Step.
-func (s *DockerStep) CollectArtifact(containerID string) (*core.Artifact, error) {
+func (s *DockerStep) CollectArtifact(ctx context.Context, containerID string) (*core.Artifact, error) {
 	artificer := NewArtificer(s.options, s.dockerOptions)
 
 	// Ensure we have the host directory
@@ -125,7 +132,7 @@ func (s *DockerStep) CollectArtifact(containerID string) (*core.Artifact, error)
 		ContentType:   "application/x-tar",
 	}
 
-	fullArtifact, err := artificer.Collect(artifact)
+	fullArtifact, err := artificer.Collect(ctx, artifact)
 	if err != nil {
 		if err == util.ErrEmptyTarball {
 			return nil, nil

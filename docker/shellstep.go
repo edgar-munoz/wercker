@@ -1,4 +1,4 @@
-//   Copyright 2016 Wercker Holding BV
+//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -68,20 +68,23 @@ func NewShellStep(stepConfig *core.StepConfig, options *core.PipelineOptions, do
 }
 
 // InitEnv parses our data into our config
-func (s *ShellStep) InitEnv(env *util.Environment) {
+func (s *ShellStep) InitEnv(env *util.Environment) error {
 	if code, ok := s.data["code"]; ok {
 		s.Code = code
 	}
-	if cmd, ok := s.data["cmd"]; ok {
+	if cmd, ok := s.data["cmd"]; ok && cmd != "" {
 		parts, err := shlex.Split(cmd)
 		if err == nil {
 			s.Cmd = parts
+		} else {
+			return fmt.Errorf("%s is an invalid value for cmd, parsing error: %s", cmd, err.Error())
 		}
 	} else {
 		cmd, _ := shlex.Split(DefaultDockerCommand)
 		s.Cmd = cmd
 	}
 	s.env = env
+	return nil
 }
 
 // Fetch NOP
@@ -119,7 +122,7 @@ func (s *ShellStep) CollectFile(a, b, c string, dst io.Writer) error {
 }
 
 // CollectArtifact NOP
-func (s *ShellStep) CollectArtifact(string) (*core.Artifact, error) {
+func (s *ShellStep) CollectArtifact(context.Context, string) (*core.Artifact, error) {
 	return nil, nil
 }
 

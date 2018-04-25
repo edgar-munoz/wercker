@@ -202,46 +202,6 @@ func (s *OptionsSuite) TestDeployOptions() {
 	run(s, globalFlags, pipelineFlags, test, args)
 }
 
-func (s *OptionsSuite) TestKeenOptions() {
-	args := defaultArgs(
-		"--keen-metrics",
-		"--keen-project-id", "test-id",
-		"--keen-project-write-key", "test-key",
-	)
-	test := func(c *cli.Context) {
-		e := emptyEnv()
-		gOpts, err := core.NewGlobalOptions(util.NewCLISettings(c), e)
-		opts, err := core.NewKeenOptions(util.NewCLISettings(c), e, gOpts)
-		s.Nil(err)
-		s.Equal(true, opts.ShouldKeenMetrics)
-		s.Equal("test-key", opts.KeenProjectWriteKey)
-		s.Equal("test-id", opts.KeenProjectID)
-	}
-	run(s, globalFlags, pipelineFlags, test, args)
-}
-
-func (s *OptionsSuite) TestKeenMissingOptions() {
-	test := func(c *cli.Context) {
-		e := emptyEnv()
-		gOpts, err := core.NewGlobalOptions(util.NewCLISettings(c), e)
-		_, err = core.NewKeenOptions(util.NewCLISettings(c), e, gOpts)
-		s.NotNil(err)
-	}
-
-	missingID := defaultArgs(
-		"--keen-metrics",
-		"--keen-project-write-key", "test-key",
-	)
-
-	missingKey := defaultArgs(
-		"--keen-metrics",
-		"--keen-project-id", "test-id",
-	)
-
-	run(s, globalFlags, cmd.KeenFlags, test, missingID)
-	run(s, globalFlags, cmd.KeenFlags, test, missingKey)
-}
-
 func (s *OptionsSuite) TestReporterOptions() {
 	args := defaultArgs(
 		"--report",
