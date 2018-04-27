@@ -1,0 +1,9 @@
+build:
+  box: golang
+  steps:
+    - internal/docker-run:
+        image: elasticsearch
+        name: myTestContainer 
+    - internal/docker-kill:
+        name: myTestContainer
+

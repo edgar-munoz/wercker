@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/fsouza/go-dockerclient"
+	docker "github.com/fsouza/go-dockerclient"
 	"github.com/wercker/wercker/core"
 	"github.com/wercker/wercker/util"
 )
@@ -44,6 +44,10 @@ func NewStep(config *core.StepConfig, options *core.PipelineOptions, dockerOptio
 	if config.ID == "internal/docker-run" {
 		return NewDockerRunStep(config, options, dockerOptions)
 	}
+	if config.ID == "internal/docker-kill" {
+		return NewDockerKillStep(config, options, dockerOptions)
+	}
+
 	if strings.HasPrefix(config.ID, "internal/") {
 		if !options.EnableDevSteps {
 			util.RootLogger().Warnln("Ignoring dev step:", config.ID)

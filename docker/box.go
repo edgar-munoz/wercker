@@ -693,12 +693,16 @@ func (b *DockerBox) ExportImage(options *ExportImageOptions) error {
 func (b *DockerBox) createDockerNetwork(dockerNetworkName string) (*docker.Network, error) {
 	b.logger.Debugln("Creating docker network")
 	client := b.client
+	networkOptions := map[string]interface{}{
+		"com.docker.network.bridge.enable_ip_masquerade": "true",
+	}
 	b.logger.WithFields(util.LogFields{
 		"Name": dockerNetworkName,
 	}).Debugln("Creating docker network :", dockerNetworkName)
 	return client.CreateNetwork(docker.CreateNetworkOptions{
 		Name:           dockerNetworkName,
 		CheckDuplicate: true,
+		Options:        networkOptions,
 	})
 }
 
@@ -716,7 +720,7 @@ func (b *DockerBox) prepareSvcDockerEnvVar(env *util.Environment) ([]string, err
 	serviceEnv := []string{}
 	client := b.client
 	for _, service := range b.services {
-		serviceName := service.GetServiceAlias()
+		serviceName := strings.Replace(service.GetServiceAlias(), "-", "_", -1)
 		if containerID := service.GetID(); containerID != "" {
 			container, err := client.InspectContainer(containerID)
 			if err != nil {

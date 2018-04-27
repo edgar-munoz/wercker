@@ -60,6 +60,9 @@ func NewDockerRunStep(stepConfig *core.StepConfig, options *core.PipelineOptions
 	originalContainerName := name
 	if stepConfig.Name != "" {
 		originalContainerName = stepConfig.Name
+	} else {
+		err := fmt.Errorf("\"name\" is a required field. Please provide an name.")
+		return nil, err
 	}
 
 	// Add a random number to the name to prevent collisions on disk
@@ -307,18 +310,24 @@ func (s *DockerRunStep) Clean() {
 		return
 	}
 
-	err = client.StopContainer(s.ContainerID, 1)
-	if err != nil {
-		s.logger.Errorln("Error in stopping the container with id : ", s.ContainerID)
-	}
+	container, _ := client.InspectContainer(s.ContainerID)
+	if container != nil {
 
-	opts := docker.RemoveContainerOptions{
-		ID:            s.ContainerID,
-		RemoveVolumes: true,
-		Force:         true,
-	}
-	err = client.RemoveContainer(opts)
-	if err != nil {
-		s.logger.Errorln("Error in deleting the container with id : ", s.ContainerID)
+		err = client.StopContainer(s.ContainerID, 1)
+		if err != nil {
+			s.logger.Errorln("Error in stopping the container with id : ", s.ContainerID)
+		}
+
+		opts := docker.RemoveContainerOptions{
+			ID:            s.ContainerID,
+			RemoveVolumes: true,
+			Force:         true,
+		}
+		err = client.RemoveContainer(opts)
+		if err != nil {
+			s.logger.Errorln("Error in deleting the container with id : ", s.ContainerID)
+		}
+	} else {
+		s.logger.Debugln(fmt.Sprintf("Container %s, already removed", s.ContainerID))
 	}
 }
