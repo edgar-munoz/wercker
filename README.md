@@ -80,6 +80,10 @@ information:
 - The application owner and application name.
 - The ID of the build or deploy that failed.
 
+## Contributing to this repository
+
+Oracle welcomes contributions to this repository from anyone.  Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
+
 ## Contact
 
 Join us in our slack room: [![Slack Status](http://werckerpublicslack.herokuapp.com/badge.svg)](http://slack.wercker.com)
