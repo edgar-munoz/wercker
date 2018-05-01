@@ -208,7 +208,10 @@ func (s *DockerRunStep) Execute(ctx context.Context, sess *core.Session) (int, e
 		s.logger.Errorln("Error in creating a box from boxConfig ", boxConfig)
 		return 1, err
 	}
-	networkName, _ := dockerRunDockerBox.GetDockerNetworkName()
+	networkName, err := dockerRunDockerBox.GetDockerNetworkName()
+	if err != nil {
+		return 1, err
+	}
 
 	dockerRunDockerBox.Fetch(ctx, s.Env())
 
