@@ -1,6 +1,9 @@
 ## unreleased
 
+## v1.0.1216 (2018-05-01)
+
 - Add Oracle Contributor Agreement (#400)
+- Convert docker-push to use the official docker client (#399)
 
 ## v1.0.1210 (2018-04-25)
 
