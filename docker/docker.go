@@ -16,9 +16,9 @@ package dockerlocal
 
 import (
 	"archive/tar"
-	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -30,15 +30,15 @@ import (
 	"time"
 
 	"github.com/docker/distribution/reference"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/docker/docker/image"
 	"github.com/docker/docker/layer"
 	"github.com/docker/go-connections/nat"
-	"github.com/fsouza/go-dockerclient"
 	"github.com/google/shlex"
 	digest "github.com/opencontainers/go-digest"
 	"github.com/pborman/uuid"
-	"github.com/pkg/errors"
 	"github.com/wercker/docker-check-access"
 	"github.com/wercker/wercker/auth"
 	"github.com/wercker/wercker/core"
@@ -47,73 +47,8 @@ import (
 )
 
 const (
-	// DefaultDockerRegistryUsername is an arbitrary value. It is unused by callees,
-	// so the value can be anything so long as it's not empty.
-	DefaultDockerRegistryUsername = "token"
-	DefaultDockerCommand          = `/bin/sh -c "if [ -e /bin/bash ]; then /bin/bash; else /bin/sh; fi"`
-	NoPushConfirmationInStatus    = "Docker push failed to complete. Please check logs for any error condition.."
+	NoPushConfirmationInStatus = "Docker push failed to complete. Please check logs for any error condition.."
 )
-
-//TODO: The current fsouza/go-dockerclient does not contain structs for status messages emitted
-// from docker in case of push - therefore had to explicitly create these structs for better
-// usablity of code (instead of unmarshalling json to a map). Official docker client should contain
-// these structs(or equivalents) already and this code should be refactored to use those instead
-// having to maintain our own.
-
-//PushStatusAux : The "aux" component of status message
-type PushStatusAux struct {
-	Tag    string `json:"tag,omitempty"`
-	Digest string `json:"digest,omitempty"`
-	Size   int64  `json:"size,omitempty"`
-}
-
-//PushStatusProgressDetail : The "progressDetail" component of status message
-type PushStatusProgressDetail struct {
-	Current int64 `json:"current,omitempty"`
-	Total   int64 `json:"total,omitempty"`
-}
-
-//PushStatusErrorDetail : The "errorDetail" component of status message
-type PushStatusErrorDetail struct {
-	Message string `json:"message,omitempty"`
-	Code    string `json:"code,omitempty"`
-}
-
-//PushStatus : Status message from Push message
-type PushStatus struct {
-	Status         string                    `json:"status,omitempty"`
-	ID             string                    `json:"id,omitempty"`
-	Progress       string                    `json:"progress,omitempty"`
-	Error          string                    `json:"error,omitempty"`
-	Aux            *PushStatusAux            `json:"aux,omitempty"`
-	ProgressDetail *PushStatusProgressDetail `json:"progressDetail,omitempty"`
-	ErrorDetail    *PushStatusErrorDetail    `json:"errorDetail,omitempty"`
-}
-
-func RequireDockerEndpoint(options *Options) error {
-	client, err := NewDockerClient(options)
-	if err != nil {
-		if err == docker.ErrInvalidEndpoint {
-			return fmt.Errorf(`The given Docker endpoint is invalid:
-		  %s
-		To specify a different endpoint use the DOCKER_HOST environment variable,
-		or the --docker-host command-line flag.
-`, options.Host)
-		}
-		return err
-	}
-	_, err = client.Version()
-	if err != nil {
-		if err == docker.ErrConnectionRefused {
-			return fmt.Errorf(`You don't seem to have a working Docker environment or wercker can't connect to the Docker endpoint:
-	%s
-To specify a different endpoint use the DOCKER_HOST environment variable,
-or the --docker-host command-line flag.`, options.Host)
-		}
-		return err
-	}
-	return nil
-}
 
 // GenerateDockerID will generate a cryptographically random 256 bit hex Docker
 // identifier.
@@ -171,7 +106,7 @@ func (s *DockerScratchPushStep) Execute(ctx context.Context, sess *core.Session)
 	dt := sess.Transport().(*DockerTransport)
 	containerID := dt.containerID
 
-	_, err := s.CollectArtifact(containerID)
+	_, err := s.CollectArtifact(ctx, containerID)
 	if err != nil {
 		return -1, err
 	}
@@ -235,7 +170,7 @@ func (s *DockerScratchPushStep) Execute(ctx context.Context, sess *core.Session)
 		Hostname:     containerID[:16],
 		WorkingDir:   s.workingDir,
 		Volumes:      s.volumes,
-		ExposedPorts: tranformPorts(s.ports),
+		ExposedPorts: s.ports,
 	}
 
 	// Make the JSON file we need
@@ -363,7 +298,7 @@ func (s *DockerScratchPushStep) Execute(ctx context.Context, sess *core.Session)
 	}
 	imageFile.Close()
 
-	client, err := NewDockerClient(s.dockerOptions)
+	client, err := NewOfficialDockerClient(s.dockerOptions)
 	if err != nil {
 		return 1, err
 	}
@@ -396,17 +331,19 @@ func (s *DockerScratchPushStep) Execute(ctx context.Context, sess *core.Session)
 		return 1, err
 	}
 
-	err = client.LoadImage(docker.LoadImageOptions{InputStream: loadFile})
+	imageLoadResponse, err := client.ImageLoad(ctx, loadFile, false)
 	if err != nil {
 		return 1, err
 	}
+	defer imageLoadResponse.Body.Close()
+	EmitStatus(e, imageLoadResponse.Body, s.options)
 
-	return s.tagAndPush(layerID, e, client)
+	return s.tagAndPush(ctx, layerID, e, client)
 }
 
 // CollectArtifact is copied from the build, we use this to get the layer
 // tarball that we'll include in the image tarball
-func (s *DockerScratchPushStep) CollectArtifact(containerID string) (*core.Artifact, error) {
+func (s *DockerScratchPushStep) CollectArtifact(ctx context.Context, containerID string) (*core.Artifact, error) {
 	artificer := NewArtificer(s.options, s.dockerOptions)
 
 	// Ensure we have the host directory
@@ -432,10 +369,10 @@ func (s *DockerScratchPushStep) CollectArtifact(containerID string) (*core.Artif
 	}
 
 	// Get the output dir, if it is empty grab the source dir.
-	fullArtifact, err := artificer.Collect(artifact)
+	fullArtifact, err := artificer.Collect(ctx, artifact)
 	if err != nil {
 		if err == util.ErrEmptyTarball {
-			fullArtifact, err = artificer.Collect(sourceArtifact)
+			fullArtifact, err = artificer.Collect(ctx, sourceArtifact)
 			if err != nil {
 				return nil, err
 			}
@@ -464,11 +401,10 @@ type DockerPushStep struct {
 	author        string
 	message       string
 	tags          []string
-	ports         map[docker.Port]struct{}
+	ports         nat.PortSet
 	volumes       map[string]struct{}
 	cmd           []string
 	entrypoint    []string
-	forceTags     bool
 	logger        *util.LogEntry
 	workingDir    string
 	authenticator auth.Authenticator
@@ -508,7 +444,7 @@ func NewDockerPushStep(stepConfig *core.StepConfig, options *core.PipelineOption
 	}, nil
 }
 
-func (s *DockerPushStep) configure(env *util.Environment) {
+func (s *DockerPushStep) configure(env *util.Environment) error {
 	if email, ok := s.data["email"]; ok {
 		s.email = env.Interpolate(email)
 	}
@@ -541,15 +477,25 @@ func (s *DockerPushStep) configure(env *util.Environment) {
 	if ports, ok := s.data["ports"]; ok {
 		iPorts := env.Interpolate(ports)
 		parts := util.SplitSpaceOrComma(iPorts)
-		portmap := make(map[docker.Port]struct{})
-		for _, port := range parts {
-			port = strings.TrimSpace(port)
-			if !strings.Contains(port, "/") {
-				port = port + "/tcp"
+		portset := make(nat.PortSet)
+		for _, portAndProto := range parts {
+			portAndProto = strings.TrimSpace(portAndProto) // The number can end with /tcp or /udp. If omitted,/tcp will be used.
+			portAndProtoSplit := strings.Split(portAndProto, "/")
+			var port, proto string
+			if len(portAndProtoSplit) > 1 {
+				port = portAndProtoSplit[0]
+				proto = portAndProtoSplit[1]
+			} else {
+				port = portAndProtoSplit[0]
+				proto = "tcp"
 			}
-			portmap[docker.Port(port)] = struct{}{}
+			p, err := nat.NewPort(proto, port)
+			if err != nil {
+				return fmt.Errorf("Invalid port %s: %s", port, err.Error())
+			}
+			portset[p] = struct{}{}
 		}
-		s.ports = portmap
+		s.ports = portset
 	}
 
 	if volumes, ok := s.data["volumes"]; ok {
@@ -613,18 +559,11 @@ func (s *DockerPushStep) configure(env *util.Environment) {
 		s.user = env.Interpolate(user)
 	}
 
-	if forceTags, ok := s.data["force-tags"]; ok {
-		ft, err := strconv.ParseBool(forceTags)
-		if err == nil {
-			s.forceTags = ft
-		}
-	} else {
-		s.forceTags = true
-	}
-
 	if image, ok := s.data["image-name"]; ok {
 		s.image = s.options.RunID + env.Interpolate(image)
 	}
+
+	return nil
 }
 
 func (s *DockerPushStep) buildAutherOpts(env *util.Environment) (dockerauth.CheckAccessOptions, error) {
@@ -786,7 +725,10 @@ func InferRegistryAndRepository(repository string, registry string, pipelineOpti
 
 // InitEnv parses our data into our config
 func (s *DockerPushStep) InitEnv(env *util.Environment) error {
-	s.configure(env)
+	err := s.configure(env)
+	if err != nil {
+		return err
+	}
 	opts, err := s.buildAutherOpts(env)
 	if err != nil {
 		return err
@@ -810,8 +752,7 @@ func (s *DockerPushStep) Fetch() (string, error) {
 // Execute commits the current container and pushes it to the configured
 // registry
 func (s *DockerPushStep) Execute(ctx context.Context, sess *core.Session) (int, error) {
-	// TODO(termie): could probably re-use the tansport's client
-	client, err := NewDockerClient(s.dockerOptions)
+	client, err := NewOfficialDockerClient(s.dockerOptions)
 	if err != nil {
 		return 1, err
 	}
@@ -846,45 +787,41 @@ func (s *DockerPushStep) Execute(ctx context.Context, sess *core.Session) (int, 
 	s.repository = s.authenticator.Repository(s.repository)
 	s.logger.Debugln("Init env:", s.data)
 
-	config := docker.Config{
-		Cmd:          s.cmd,
-		Entrypoint:   s.entrypoint,
-		WorkingDir:   s.workingDir,
-		User:         s.user,
-		Env:          s.env,
-		StopSignal:   s.stopSignal,
-		Labels:       s.labels,
-		ExposedPorts: s.ports,
-		Volumes:      s.volumes,
-	}
-
 	var imageID = s.image
 	// if image is specified then it is assumed to be the name or ID of an existing image
 	// if image is not specified then create a new image by committing the pipeline container
 	if imageID == "" {
-		commitOpts := docker.CommitContainerOptions{
-			Container:  containerID,
-			Repository: s.repository,
-			Author:     s.author,
-			Message:    s.message,
-			Run:        &config,
-			Tag:        s.tags[0],
+		config := container.Config{
+			Cmd:          s.cmd,
+			Entrypoint:   s.entrypoint,
+			WorkingDir:   s.workingDir,
+			User:         s.user,
+			Env:          s.env,
+			StopSignal:   s.stopSignal,
+			Labels:       s.labels,
+			ExposedPorts: s.ports,
+			Volumes:      s.volumes,
 		}
 
-		s.logger.Debugln("Commit container:", containerID)
-		i, err := client.CommitContainer(commitOpts)
+		named, err := reference.WithName(s.repository)
+		ref, err := reference.WithTag(named, s.tags[0])
+
+		containerCommitOptions := types.ContainerCommitOptions{
+			Reference: ref.String(),
+			Comment:   s.message,
+			Author:    s.author,
+			Config:    &config,
+		}
+
+		s.logger.Debugln("Commiting container:", containerID)
+		idResponse, err := client.ContainerCommit(ctx, containerID, containerCommitOptions)
 		if err != nil {
 			return -1, err
 		}
-
-		if s.dockerOptions.CleanupImage {
-			defer cleanupImage(s.logger, client, s.repository, s.tags[0])
-		}
-
-		s.logger.WithField("Image", i).Debug("Commit completed")
-		imageID = i.ID
+		imageID = idResponse.ID
+		s.logger.WithField("Image", imageID).Debug("Commit completed")
 	}
-	return s.tagAndPush(imageID, e, client)
+	return s.tagAndPush(ctx, imageID, e, client)
 }
 
 func (s *DockerPushStep) buildTags() []string {
@@ -897,91 +834,58 @@ func (s *DockerPushStep) buildTags() []string {
 	return s.tags
 }
 
-func (s *DockerPushStep) tagAndPush(imageID string, e *core.NormalizedEmitter, client *DockerClient) (int, error) {
+func (s *DockerPushStep) tagAndPush(ctx context.Context, imageID string, e *core.NormalizedEmitter, client *OfficialDockerClient) (int, error) {
 	// Create a pipe since we want a io.Reader but Docker expects a io.Writer
 	r, w := io.Pipe()
 	// emitStatusses in a different go routine
 	go EmitStatus(e, r, s.options)
 	defer w.Close()
 	for _, tag := range s.tags {
-		tagOpts := docker.TagImageOptions{
-			Repo:  s.repository,
-			Tag:   tag,
-			Force: s.forceTags,
-		}
-		err := client.TagImage(imageID, tagOpts)
-		s.logger.Println("Pushing image for tag ", tag)
+
+		target := fmt.Sprintf("%s:%s", s.repository, tag)
+		s.logger.Println("Pushing image for ", target)
+		err := client.ImageTag(ctx, imageID, target)
 		if err != nil {
 			s.logger.Errorln("Failed to push:", err)
 			return 1, err
 		}
-		inactivityDuration := 5 * time.Minute
-		buf := new(bytes.Buffer)
-		mw := io.MultiWriter(w, buf)
-		pushOpts := docker.PushImageOptions{
-			Name:              s.repository,
-			OutputStream:      mw,
-			RawJSONStream:     true,
-			Tag:               tag,
-			InactivityTimeout: inactivityDuration,
-		}
 		if s.dockerOptions.CleanupImage {
-			defer cleanupImage(s.logger, client, s.repository, tag)
+			defer cleanupImage(ctx, s.logger, client.Client, s.repository, tag)
 		}
 		if !s.dockerOptions.Local {
-			auth := docker.AuthConfiguration{
+			authConfig := types.AuthConfig{
 				Username: s.authenticator.Username(),
 				Password: s.authenticator.Password(),
 				Email:    s.email,
 			}
-			err := client.PushImage(pushOpts, auth)
+			authEncodedJSON, err := json.Marshal(authConfig)
+			if err != nil {
+				s.logger.Errorln("Failed to encode auth:", err)
+				return 1, err
+			}
+			authStr := base64.URLEncoding.EncodeToString(authEncodedJSON)
+			imagePushOptions := types.ImagePushOptions{
+				RegistryAuth: authStr,
+			}
+			response, err := client.ImagePush(ctx, target, imagePushOptions)
 			if err != nil {
 				s.logger.Errorln("Failed to push:", err)
 				return 1, err
 			}
-			statusMessages := make([]PushStatus, 0)
-			dec := json.NewDecoder(bytes.NewReader(buf.Bytes()))
-			for {
-				var status PushStatus
-				if err := dec.Decode(&status); err == io.EOF {
-					break
-				} else if err != nil {
-					s.logger.Errorln("Failed to parse status outputs from docker push:", err)
-					break
-				}
-				statusMessages = append(statusMessages, status)
-			}
-			isContainerPushed := false
-			for _, statusMessage := range statusMessages {
-				if len(strings.TrimSpace(statusMessage.Error)) != 0 {
-					errorMessageToDisplay := statusMessage.Error
-					if statusMessage.ErrorDetail != nil {
-						errorMessageToDisplay = fmt.Sprintf("Push failed, Error Details: Code: %s, Message: %s", statusMessage.ErrorDetail.Code, statusMessage.ErrorDetail.Message)
-					}
-					s.logger.Errorln("Failed to push:", errorMessageToDisplay)
-					return 1, errors.New(errorMessageToDisplay)
-				}
-				if statusMessage.Aux != nil && statusMessage.Aux.Tag == tag {
-					s.logger.Println("Pushed container:", s.repository, tag, ",Digest:", statusMessage.Aux.Digest)
-					e.Emit(core.Logs, &core.LogsArgs{
-						Logs: fmt.Sprintf("\nPushed %s:%s\n", s.repository, tag),
-					})
-					isContainerPushed = true
-				}
-			}
-			if !isContainerPushed {
-				s.logger.Errorln("Failed to push tag:", tag, "Please check log messages")
-				return 1, errors.New(NoPushConfirmationInStatus)
-			}
+			defer response.Close()
 
+			err = EmitStatus(e, response, s.options)
+			if err != nil {
+				return 1, err
+			}
 		}
 	}
 	return 0, nil
 }
 
-func cleanupImage(logger *util.LogEntry, client *DockerClient, repository, tag string) {
+func cleanupImage(ctx context.Context, logger *util.LogEntry, client *client.Client, repository, tag string) {
 	imageName := fmt.Sprintf("%s:%s", repository, tag)
-	err := client.RemoveImage(imageName)
+	_, err := client.ImageRemove(ctx, imageName, types.ImageRemoveOptions{})
 	if err != nil {
 		logger.
 			WithError(err).
@@ -1000,7 +904,7 @@ func (s *DockerPushStep) CollectFile(a, b, c string, dst io.Writer) error {
 }
 
 // CollectArtifact NOP
-func (s *DockerPushStep) CollectArtifact(string) (*core.Artifact, error) {
+func (s *DockerPushStep) CollectArtifact(context.Context, string) (*core.Artifact, error) {
 	return nil, nil
 }
 
@@ -1017,14 +921,4 @@ func (s *DockerPushStep) ShouldSyncEnv() bool {
 		return disableSync != "true"
 	}
 	return true
-}
-
-func tranformPorts(in map[docker.Port]struct{}) map[nat.Port]struct{} {
-	result := make(map[nat.Port]struct{})
-
-	for k, v := range in {
-		result[nat.Port(k)] = v
-	}
-
-	return result
 }

@@ -22,6 +22,7 @@ import (
 	docker "github.com/fsouza/go-dockerclient"
 	"github.com/wercker/wercker/core"
 	"github.com/wercker/wercker/util"
+	"golang.org/x/net/context"
 )
 
 func NewStep(config *core.StepConfig, options *core.PipelineOptions, dockerOptions *Options) (core.Step, error) {
@@ -121,7 +122,7 @@ func (s *DockerStep) CollectFile(containerID, path, name string, dst io.Writer) 
 }
 
 // CollectArtifact copies the artifacts associated with the Step.
-func (s *DockerStep) CollectArtifact(containerID string) (*core.Artifact, error) {
+func (s *DockerStep) CollectArtifact(ctx context.Context, containerID string) (*core.Artifact, error) {
 	artificer := NewArtificer(s.options, s.dockerOptions)
 
 	// Ensure we have the host directory
@@ -138,7 +139,7 @@ func (s *DockerStep) CollectArtifact(containerID string) (*core.Artifact, error)
 		ContentType:   "application/x-tar",
 	}
 
-	fullArtifact, err := artificer.Collect(artifact)
+	fullArtifact, err := artificer.Collect(ctx, artifact)
 	if err != nil {
 		if err == util.ErrEmptyTarball {
 			return nil, nil

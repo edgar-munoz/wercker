@@ -17,13 +17,27 @@ package dockerlocal
 import (
 	"fmt"
 	"path"
+	"reflect"
 
 	"github.com/docker/docker/client"
+	"golang.org/x/net/context"
 )
+
+const (
+	// DefaultDockerRegistryUsername is an arbitrary value. It is unused by callees,
+	// so the value can be anything so long as it's not empty.
+	DefaultDockerRegistryUsername = "token"
+	DefaultDockerCommand          = `/bin/sh -c "if [ -e /bin/bash ]; then /bin/bash; else /bin/sh; fi"`
+)
+
+// OfficialDockerClient is a wrapper for client.Client (which makes it easier to substitute a mock for testing)
+type OfficialDockerClient struct {
+	*client.Client
+}
 
 // NewOfficialDockerClient uses the official docker client to create a Client struct
 // which can be used to perform operations against a docker server
-func NewOfficialDockerClient(options *Options) (*client.Client, error) {
+func NewOfficialDockerClient(options *Options) (*OfficialDockerClient, error) {
 	var dockerClient *client.Client
 	var err error
 	if options.TLSVerify == "1" {
@@ -41,5 +55,27 @@ func NewOfficialDockerClient(options *Options) (*client.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return dockerClient, nil
+	return &OfficialDockerClient{Client: dockerClient}, nil
+}
+
+// RequireDockerEndpoint attempts to connect to the specified docker daemon and returns an error if unsuccessful
+func RequireDockerEndpoint(ctx context.Context, options *Options) error {
+	client, err := NewOfficialDockerClient(options)
+	if err != nil {
+		return fmt.Errorf(`Invalid Docker endpoint: %s
+			To specify a different endpoint use the DOCKER_HOST environment variable,
+			or the --docker-host command-line flag.
+		`, err.Error())
+	}
+	_, err = client.ServerVersion(ctx)
+	if err != nil {
+		if reflect.TypeOf(err).String() == "client.errConnectionFailed" {
+			return fmt.Errorf(`You don't seem to have a working Docker environment or wercker can't connect to the Docker endpoint:
+			%s
+		To specify a different endpoint use the DOCKER_HOST environment variable,
+		or the --docker-host command-line flag.`, options.Host)
+		}
+		return err
+	}
+	return nil
 }

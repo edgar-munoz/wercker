@@ -1,4 +1,4 @@
-//   Copyright 2016 Wercker Holding BV
+//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ type Step interface {
 	InitEnv(*util.Environment) error
 	Execute(context.Context, *Session) (int, error)
 	CollectFile(string, string, string, io.Writer) error
-	CollectArtifact(string) (*Artifact, error)
+	CollectArtifact(context.Context, string) (*Artifact, error)
 	// TODO(termie): don't think this needs to be universal
 	ReportPath(...string) string
 	Clean()
@@ -486,7 +486,7 @@ func (s *ExternalStep) CollectFile(containerID, path, name string, dst io.Writer
 }
 
 // CollectArtifact noop
-func (s *ExternalStep) CollectArtifact(containerID string) (*Artifact, error) {
+func (s *ExternalStep) CollectArtifact(ctx context.Context, containerID string) (*Artifact, error) {
 	return nil, nil
 }
 

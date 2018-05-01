@@ -149,7 +149,8 @@ func (s *StatusHandlerSuite) TestPullParallelDownloads() {
 
 	p := NewJSONMessageProcessor()
 	for _, step := range testSteps {
-		actual := p.ProcessJSONMessage(step.in)
+		actual, err := p.ProcessJSONMessage(step.in)
+		s.Nil(err)
 		s.Equal(actual, step.expected)
 	}
 }
@@ -253,7 +254,8 @@ func (s *StatusHandlerSuite) TestPushParallelUploads() {
 
 	p := NewJSONMessageProcessor()
 	for _, step := range testSteps {
-		actual := p.ProcessJSONMessage(step.in)
+		actual, err := p.ProcessJSONMessage(step.in)
+		s.Nil(err)
 		s.Equal(actual, step.expected)
 	}
 }

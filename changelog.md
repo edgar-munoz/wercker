@@ -1,7 +1,19 @@
 ## unreleased
 
+## v1.0.1216 (2018-05-01)
+
+- Add Oracle Contributor Agreement (#400)
+- Convert docker-push to use the official docker client (#399)
+
+## v1.0.1210 (2018-04-25)
+
+- Revert docker links to docker networks change, which was causing build issues (#397)
+
+## v1.0.1205 (2018-04-20)
+
 - Changes for robust error handling and reporting in docker-push (#387)
 - Replace docker links with docker network (#382)
+- Change some docker API calls to use the official Docker client (#385) 
 
 ## v1.0.1201 (2018-04-16)
 

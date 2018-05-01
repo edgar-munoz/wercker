@@ -1,27 +1,25 @@
 package dockerlocal
 
 import (
-	"encoding/json"
+	"bytes"
+	"io"
 	"net/url"
+	"strings"
 	"testing"
 
-	docker "github.com/fsouza/go-dockerclient"
+	"github.com/docker/docker/api/types"
 	"github.com/stretchr/testify/suite"
 	"github.com/wercker/docker-check-access"
 	"github.com/wercker/wercker/auth"
 	"github.com/wercker/wercker/core"
 	"github.com/wercker/wercker/util"
+	"golang.org/x/net/context"
 )
 
 const (
-	RepoUnauthorized         = "fail_me/unauthorized"
-	ErrorMessageUnauthorized = "unauthorized: incorrect username or password"
-	RepoUnconfirmedPush      = "fail_me/unconfirmed"
-	ErrorMessageUnconfirmed  = NoPushConfirmationInStatus
-	RepoSuccessful           = "pass_me/successful"
-	RepoSuccessfulImageSHA   = "9987d147c777f2fff2ec17d557304b20da65bc9e270f945623ab04de59ca4f2c"
-	RepoSuccessfulImageSize  = 121
-	RepoSuccessfulImageTag   = "stage"
+	repoErrorInPush        = "fail_me/error"
+	repoSuccessful         = "pass_me/successful"
+	repoSuccessfulImageTag = "sometag"
 )
 
 type PushSuite struct {
@@ -99,57 +97,44 @@ func (s *PushSuite) TestInferRegistryAndRepository() {
 
 }
 
-//TestTagAndPushCorretStatusReportingForUnauthorizedFailedPush - Tests a scenario when
-// push will fail due to an unauthorized access to a repo
-func (s *PushSuite) TestTagAndPushCorretStatusReportingForUnauthorizedFailedPush() {
+// TestTagAndPushStatusReportingForErrorInPush - Tests a scenario when
+// push fails and the returned JSON contains an error message
+func (s *PushSuite) TestTagAndPushStatusReportingForErrorInPush() {
 	stepData := make(map[string]string)
 	stepData["username"] = "user"
 	stepData["password"] = "pass"
-	stepData["repository"] = RepoUnauthorized
+	stepData["repository"] = repoErrorInPush
 	stepData["registry"] = "https://quay.io"
 	stepData["tag"] = "test"
 
 	exitCode, error := executePushStep(stepData)
 	s.NotEqual(exitCode, 0)
 	s.NotNil(error)
-	s.Contains(error.Error(), ErrorMessageUnauthorized)
+	if error != nil {
+		s.Contains(error.Error(), errorMessage)
+	}
 }
 
-//TestTagAndPushCorretStatusReportingForUnconfirmedFailedPush - Tests a scenario when
-// push will not return any failure message as such and also will not be successful!
-func (s *PushSuite) TestTagAndPushCorretStatusReportingForUnconfirmedFailedPush() {
-	stepData := make(map[string]string)
-	stepData["username"] = "user"
-	stepData["password"] = "pass"
-	stepData["repository"] = RepoUnconfirmedPush
-	stepData["registry"] = "https://quay.io"
-	stepData["tag"] = "test"
-
-	exitCode, error := executePushStep(stepData)
-	s.NotEqual(exitCode, 0)
-	s.NotNil(error)
-	s.Contains(error.Error(), ErrorMessageUnconfirmed)
-}
-
-//TestTagAndPushCorretStatusReportingForSuccessfulPush - Tests the scenario when a push is
+// TestTagAndPushStatusReportingForSuccessfulPush - Tests the scenario when a push is
 // successful and tagAndPush will only return success if the status message from docker will
 // contain digest and tag of pushed container
-func (s *PushSuite) TestTagAndPushCorretStatusReportingForSuccessfulPush() {
+func (s *PushSuite) TestTagAndPushStatusReportingForSuccessfulPush() {
 	stepData := make(map[string]string)
 	stepData["username"] = "user"
 	stepData["password"] = "pass"
-	stepData["repository"] = RepoSuccessful
+	stepData["repository"] = repoSuccessful
 	stepData["registry"] = "https://quay.io"
-	stepData["tag"] = RepoSuccessfulImageTag
+	stepData["tag"] = repoSuccessfulImageTag
 
 	exitCode, error := executePushStep(stepData)
 	s.Equal(exitCode, 0)
 	s.Nil(error)
 }
 
-//executePushStep - Prepares stepcConfig for docker-push step from input stepData
+//executePushStep - Prepares stepConfig for docker-push step from input stepData
 // and invokes tagAndPush
 func executePushStep(stepData map[string]string) (int, error) {
+	ctx := context.Background()
 	config := &core.StepConfig{
 		ID:   "internal/docker-push",
 		Data: stepData,
@@ -163,36 +148,51 @@ func executePushStep(stepData map[string]string) (int, error) {
 		"Logger": "Test",
 	})
 	mockEmittor := core.NewNormalizedEmitter()
-	mockDockerClient := &DockerClient{}
-	return step.tagAndPush("test", mockEmittor, mockDockerClient)
+	mockDockerClient := &OfficialDockerClient{}
+	return step.tagAndPush(ctx, "test", mockEmittor, mockDockerClient)
 }
 
-//RemoveImage - Mocks DockerClient.TagImage
-func (c *DockerClient) TagImage(name string, opts docker.TagImageOptions) error {
+// ImageTag - Mocks Docker client function ImageTag
+func (cli *OfficialDockerClient) ImageTag(ctx context.Context, source, target string) error {
 	return nil
 }
 
-//RemoveImage - Mocks DockerClient.RemoveImage
-func (c *DockerClient) RemoveImage(name string) error {
+// ImageRemove - Mocks Docker client function ImageRemove
+func (client *OfficialDockerClient) ImageRemove(ctx context.Context, imageID string, options types.ImageRemoveOptions) ([]types.ImageDeleteResponseItem, error) {
+	return nil, nil
+}
+
+type mockReadCloser struct {
+	io.Reader
+}
+
+func (mockReadCloser) Close() error {
 	return nil
 }
 
-//PushImage - Mocks DockerClient.PushImage - writes status messages to OutputStream based on repository name
-func (c *DockerClient) PushImage(opts docker.PushImageOptions, auth docker.AuthConfiguration) error {
-	status := &PushStatus{}
-	if opts.Name == RepoUnauthorized {
-		status.Error = ErrorMessageUnauthorized
-		status.ErrorDetail = &PushStatusErrorDetail{Message: ErrorMessageUnauthorized}
-	} else if opts.Name == RepoUnconfirmedPush {
-		status.Status = "Waiting"
-		status.ID = "61c06e07759a"
-		status.ProgressDetail = &PushStatusProgressDetail{}
-	} else if opts.Name == RepoSuccessful {
-		status.Aux = &PushStatusAux{Digest: RepoSuccessfulImageSHA, Size: RepoSuccessfulImageSize, Tag: RepoSuccessfulImageTag}
+// ImagePush - Mocks Docker client function ImagePush
+func (cli *OfficialDockerClient) ImagePush(ctx context.Context, image string, options types.ImagePushOptions) (io.ReadCloser, error) {
+	// The returned JSON depends on which pretend repo has been specified
+	var reader io.Reader
+	if strings.HasPrefix(image, repoErrorInPush) {
+		reader = bytes.NewReader(getJSONOutputForMockErrorInPush())
+	} else {
+		// RepoSuccessful
+		reader = bytes.NewReader(getJSONOutputForMockSuccessfulPush())
 	}
-	jsonData, _ := json.Marshal(status)
-	opts.OutputStream.Write(jsonData)
-	return nil
+	return &mockReadCloser{Reader: reader}, nil
+}
+
+func getJSONOutputForMockSuccessfulPush() []byte {
+	result := "{\"status\":\"The push refers to repository [docker.io/foo/bar]\"}"
+	return []byte(result)
+}
+
+var errorMessage = "error parsing HTTP 404 response body: invalid character"
+
+func getJSONOutputForMockErrorInPush() []byte {
+	result := "{\"errorDetail\":{\"message\":\"" + errorMessage + "\",\"error\":\"" + errorMessage + "\"}}"
+	return []byte(result)
 }
 
 //TestInferRegistryAndRepositoryInvalidInputs validates that poper errors

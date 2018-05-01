@@ -35,23 +35,23 @@ import (
 
 // Box is our wrapper for Box operations
 type DockerBox struct {
-	Name              string
-	ShortName         string
-	networkDisabled   bool
-	client            *DockerClient
-	services          []core.ServiceBox
-	options           *core.PipelineOptions
-	dockerOptions     *Options
-	container         *docker.Container
-	config            *core.BoxConfig
-	cmd               string
-	repository        string
-	tag               string
-	images            []*docker.Image
-	logger            *util.LogEntry
-	entrypoint        string
-	image             *docker.Image
-	volumes           []string
+	Name            string
+	ShortName       string
+	networkDisabled bool
+	client          *DockerClient
+	services        []core.ServiceBox
+	options         *core.PipelineOptions
+	dockerOptions   *Options
+	container       *docker.Container
+	config          *core.BoxConfig
+	cmd             string
+	repository      string
+	tag             string
+	images          []*docker.Image
+	logger          *util.LogEntry
+	entrypoint      string
+	image           *docker.Image
+	volumes         []string
 }
 
 // NewDockerBox from a name and other references

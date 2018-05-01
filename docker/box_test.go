@@ -1,4 +1,4 @@
-//   Copyright 2016 Wercker Holding BV
+//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -21,12 +21,14 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/wercker/wercker/core"
 	"github.com/wercker/wercker/util"
+	"golang.org/x/net/context"
 )
 
 func boxByID(s string) (core.Box, error) {
+	ctx := context.Background()
 	settings := util.NewCheapSettings(nil)
 	env := util.NewEnvironment()
-	dockerOptions, err := NewOptions(settings, env)
+	dockerOptions, err := NewOptions(ctx, settings, env)
 	if err != nil {
 		return nil, err
 	}

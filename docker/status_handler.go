@@ -1,4 +1,4 @@
-//   Copyright 2016 Wercker Holding BV
+//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -41,9 +41,13 @@ type JSONMessageProcessor struct {
 
 // ProcessJSONMessage will take JSONMessage m and generate logs based on the
 // message and previous messages.
-func (s *JSONMessageProcessor) ProcessJSONMessage(m *jsonmessage.JSONMessage) string {
+func (s *JSONMessageProcessor) ProcessJSONMessage(m *jsonmessage.JSONMessage) (string, error) {
+	if m.Error != nil {
+		return "", m.Error
+	}
+
 	if m.Stream != "" {
-		return m.Stream
+		return m.Stream, nil
 	}
 
 	switch m.Status {
@@ -69,7 +73,7 @@ func (s *JSONMessageProcessor) ProcessJSONMessage(m *jsonmessage.JSONMessage) st
 		s.message = m
 	}
 
-	return s.getOutput()
+	return s.getOutput(), nil
 }
 
 // generateFilling will generate spaces based on s.lastProgressLength and

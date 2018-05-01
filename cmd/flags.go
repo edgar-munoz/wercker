@@ -49,7 +49,6 @@ var (
 		cli.IntFlag{Name: "docker-memory-reservation", Usage: "Set docker user memory soft limit in MB NOTIMPLEMENTED", Hidden: true},
 		cli.IntFlag{Name: "docker-kernel-memory", Usage: "Set docker kernel memory limit in MB NOTIMPLEMENTED", Hidden: true},
 		cli.BoolFlag{Name: "docker-cleanup-image", Usage: "Remove image from the Docker when finished pushing them", Hidden: true},
-		cli.StringFlag{Name: "docker-network", Value: "", Usage: "Docker network name.", Hidden: true},
 	}
 
 	// These flags control where we store local files

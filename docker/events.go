@@ -1,4 +1,4 @@
-//   Copyright 2016 Wercker Holding BV
+//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 )
 
 // EmitStatus emits the json message on r
-func EmitStatus(e *core.NormalizedEmitter, r io.Reader, options *core.PipelineOptions) {
+func EmitStatus(e *core.NormalizedEmitter, r io.Reader, options *core.PipelineOptions) error {
 	s := NewJSONMessageProcessor()
 	dec := json.NewDecoder(r)
 	for {
@@ -36,10 +36,15 @@ func EmitStatus(e *core.NormalizedEmitter, r io.Reader, options *core.PipelineOp
 			util.RootLogger().Panic(err)
 		}
 
-		line := s.ProcessJSONMessage(&m)
+		line, err := s.ProcessJSONMessage(&m)
+		if err != nil {
+			return err
+		}
 		e.Emit(core.Logs, &core.LogsArgs{
 			Logs:   line,
 			Stream: "docker",
 		})
+
 	}
+	return nil
 }

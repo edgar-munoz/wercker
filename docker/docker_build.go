@@ -179,7 +179,7 @@ func (s *DockerBuildStep) Execute(ctx context.Context, sess *core.Session) (int,
 
 	// Extract the /pipeline/source directory from the running pipeline container
 	// and save it as a tarfile currentSource.tar
-	_, err := s.CollectArtifact(containerID)
+	_, err := s.CollectArtifact(ctx, containerID)
 	if err != nil {
 		return -1, err
 	}
@@ -243,7 +243,7 @@ func (s *DockerBuildStep) CollectFile(a, b, c string, dst io.Writer) error {
 
 // CollectArtifact copies the /pipeline/source directory from the running pipeline container
 // and saves it as a directory currentSource and a tarfile currentSource.tar
-func (s *DockerBuildStep) CollectArtifact(containerID string) (*core.Artifact, error) {
+func (s *DockerBuildStep) CollectArtifact(ctx context.Context, containerID string) (*core.Artifact, error) {
 	artificer := NewArtificer(s.options, s.dockerOptions)
 
 	artifact := &core.Artifact{
@@ -266,7 +266,7 @@ func (s *DockerBuildStep) CollectArtifact(containerID string) (*core.Artifact, e
 		"Bucket":        artifact.Bucket,
 	}).Debugln("Collecting artifacts from container to ", artifact.HostTarPath)
 
-	fullArtifact, err := artificer.Collect(artifact)
+	fullArtifact, err := artificer.Collect(ctx, artifact)
 	if err != nil {
 		return nil, err
 	}

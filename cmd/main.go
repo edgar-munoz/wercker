@@ -1,4 +1,4 @@
-//   Copyright 2016 Wercker Holding BV
+//   Copyright © 2016,2018, Oracle and/or its affiliates.  All rights reserved.
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -51,6 +51,7 @@ var (
 		ShortName: "b",
 		Usage:     "build a project",
 		Action: func(c *cli.Context) {
+			ctx := context.Background()
 			envfile := c.GlobalString("environment")
 			env := util.NewEnvironment(os.Environ()...)
 			env.LoadFile(envfile)
@@ -61,12 +62,12 @@ var (
 				cliLogger.Errorln("Invalid options\n", err)
 				os.Exit(1)
 			}
-			dockerOptions, err := dockerlocal.NewOptions(settings, env)
+			dockerOptions, err := dockerlocal.NewOptions(ctx, settings, env)
 			if err != nil {
 				cliLogger.Errorln("Invalid options\n", err)
 				os.Exit(1)
 			}
-			_, err = cmdBuild(context.Background(), opts, dockerOptions)
+			_, err = cmdBuild(ctx, opts, dockerOptions)
 			if err != nil {
 				cliLogger.Fatal(err)
 			}
@@ -78,6 +79,7 @@ var (
 		Name:  "dev",
 		Usage: "develop and run a local project",
 		Action: func(c *cli.Context) {
+			ctx := context.Background()
 			envfile := c.GlobalString("environment")
 			settings := util.NewCLISettings(c)
 			env := util.NewEnvironment(os.Environ()...)
@@ -87,12 +89,12 @@ var (
 				cliLogger.Errorln("Invalid options\n", err)
 				os.Exit(1)
 			}
-			dockerOptions, err := dockerlocal.NewOptions(settings, env)
+			dockerOptions, err := dockerlocal.NewOptions(ctx, settings, env)
 			if err != nil {
 				cliLogger.Errorln("Invalid options\n", err)
 				os.Exit(1)
 			}
-			_, err = cmdDev(context.Background(), opts, dockerOptions)
+			_, err = cmdDev(ctx, opts, dockerOptions)
 			if err != nil {
 				cliLogger.Fatal(err)
 			}
@@ -105,6 +107,7 @@ var (
 		// ShortName: "b",
 		Usage: "check the project's yaml",
 		Action: func(c *cli.Context) {
+			ctx := context.Background()
 			envfile := c.GlobalString("environment")
 			settings := util.NewCLISettings(c)
 			env := util.NewEnvironment(os.Environ()...)
@@ -114,7 +117,7 @@ var (
 				cliLogger.Errorln("Invalid options\n", err)
 				os.Exit(1)
 			}
-			dockerOptions, err := dockerlocal.NewOptions(settings, env)
+			dockerOptions, err := dockerlocal.NewOptions(ctx, settings, env)
 			if err != nil {
 				cliLogger.Errorln("Invalid options\n", err)
 				os.Exit(1)
@@ -132,6 +135,7 @@ var (
 		ShortName: "d",
 		Usage:     "deploy a project",
 		Action: func(c *cli.Context) {
+			ctx := context.Background()
 			envfile := c.GlobalString("environment")
 			settings := util.NewCLISettings(c)
 			env := util.NewEnvironment(os.Environ()...)
@@ -141,12 +145,12 @@ var (
 				cliLogger.Errorln("Invalid options\n", err)
 				os.Exit(1)
 			}
-			dockerOptions, err := dockerlocal.NewOptions(settings, env)
+			dockerOptions, err := dockerlocal.NewOptions(ctx, settings, env)
 			if err != nil {
 				cliLogger.Errorln("Invalid options\n", err)
 				os.Exit(1)
 			}
-			_, err = cmdDeploy(context.Background(), opts, dockerOptions)
+			_, err = cmdDeploy(ctx, opts, dockerOptions)
 			if err != nil {
 				cliLogger.Fatal(err)
 			}
@@ -181,7 +185,7 @@ var (
 		Action: func(c *cli.Context) {
 			// envfile := c.GlobalString("environment")
 			// _ = godotenv.Load(envfile)
-
+			ctx := context.Background()
 			settings := util.NewCLISettings(c)
 			env := util.NewEnvironment(os.Environ()...)
 			opts, err := core.NewInspectOptions(settings, env)
@@ -189,7 +193,7 @@ var (
 				cliLogger.Errorln("Invalid options\n", err)
 				os.Exit(1)
 			}
-			dockerOptions, err := dockerlocal.NewOptions(settings, env)
+			dockerOptions, err := dockerlocal.NewOptions(ctx, settings, env)
 			if err != nil {
 				cliLogger.Errorln("Invalid options\n", err)
 				os.Exit(1)
@@ -253,7 +257,7 @@ var (
 				cliLogger.Errorln("Pull requires the application ID or the build ID as the only argument")
 				os.Exit(1)
 			}
-
+			ctx := context.Background()
 			settings := util.NewCLISettings(c)
 			env := util.NewEnvironment(os.Environ()...)
 			opts, err := core.NewPullOptions(settings, env)
@@ -261,7 +265,7 @@ var (
 				cliLogger.Errorln("Invalid options\n", err)
 				os.Exit(1)
 			}
-			dockerOptions, err := dockerlocal.NewOptions(settings, env)
+			dockerOptions, err := dockerlocal.NewOptions(ctx, settings, env)
 			if err != nil {
 				cliLogger.Errorln("Invalid options\n", err)
 				os.Exit(1)
@@ -1041,7 +1045,7 @@ func executePipeline(cmdCtx context.Context, options *core.PipelineOptions, dock
 	DumpOptions(options)
 
 	// Do some sanity checks before starting
-	err = dockerlocal.RequireDockerEndpoint(dockerOptions)
+	err = dockerlocal.RequireDockerEndpoint(cmdCtx, dockerOptions)
 	if err != nil {
 		return nil, soft.Exit(err)
 	}
@@ -1167,7 +1171,7 @@ func executePipeline(cmdCtx context.Context, options *core.PipelineOptions, dock
 		}
 		logger.Printf(f.Info("Running step", step.DisplayName()))
 		timer.Reset()
-		sr, err := r.RunStep(shared, step, stepCounter.Increment())
+		sr, err := r.RunStep(cmdCtx, shared, step, stepCounter.Increment())
 		if err != nil {
 			pr.Success = false
 			pr.FailedStepName = step.DisplayName()
@@ -1221,7 +1225,7 @@ func executePipeline(cmdCtx context.Context, options *core.PipelineOptions, dock
 				Logs: "Storing artifacts\n",
 			})
 
-			artifact, err := pipeline.CollectArtifact(shared.containerID)
+			artifact, err := pipeline.CollectArtifact(cmdCtx, shared.containerID)
 			// Ignore ErrEmptyTarball errors
 			if err != util.ErrEmptyTarball {
 				if err != nil {
@@ -1340,7 +1344,7 @@ func executePipeline(cmdCtx context.Context, options *core.PipelineOptions, dock
 		// into the CacheDir
 		if !options.DirectMount {
 			timer.Reset()
-			err = pipeline.CollectCache(shared.containerID)
+			err = pipeline.CollectCache(cmdCtx, shared.containerID)
 			if err != nil {
 				logger.WithField("Error", err).Error("Unable to store cache")
 			}
@@ -1399,7 +1403,7 @@ func executePipeline(cmdCtx context.Context, options *core.PipelineOptions, dock
 	for _, step := range pipeline.AfterSteps() {
 		logger.Println(f.Info("Running after-step", step.DisplayName()))
 		timer.Reset()
-		_, err := r.RunStep(newShared, step, stepCounter.Increment())
+		_, err := r.RunStep(cmdCtx, newShared, step, stepCounter.Increment())
 		if err != nil {
 			logger.Println(f.Fail("After-step failed", step.DisplayName(), timer.String()))
 			break
@@ -1411,7 +1415,7 @@ func executePipeline(cmdCtx context.Context, options *core.PipelineOptions, dock
 	// into the CacheDir
 	if !options.DirectMount {
 		timer.Reset()
-		err = pipeline.CollectCache(newShared.containerID)
+		err = pipeline.CollectCache(cmdCtx, newShared.containerID)
 		if err != nil {
 			logger.WithField("Error", err).Error("Unable to store cache")
 		}
