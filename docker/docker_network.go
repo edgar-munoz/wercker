@@ -31,18 +31,19 @@ func (b *DockerBox) GetDockerNetworkName() (string, error) {
 	dockerNetworkName := b.dockerOptions.NetworkName
 	if dockerNetworkName == "" {
 		if b.options.DockerNetworkName == "" {
-			dockerNetworkName, err := b.prepareDockerNetworkName()
+			preparedDockerNetworkName, err := b.prepareDockerNetworkName()
 			if err != nil {
 				return "", err
 			}
 
-			b.options.DockerNetworkName = dockerNetworkName
-			_, err = b.createDockerNetwork(dockerNetworkName)
+			b.options.DockerNetworkName = preparedDockerNetworkName
+			_, err = b.createDockerNetwork(b.options.DockerNetworkName)
 			if err != nil {
 				b.logger.Errorln("Error while creating network", err)
 				return "", err
 			}
 		}
+		return b.options.DockerNetworkName, nil
 	} else {
 		client := b.client
 		_, err := client.NetworkInfo(dockerNetworkName)
@@ -50,8 +51,8 @@ func (b *DockerBox) GetDockerNetworkName() (string, error) {
 			b.logger.Errorln("Network does not exist", err)
 			return "", err
 		}
+		return dockerNetworkName, nil
 	}
-	return dockerNetworkName, nil
 }
 
 // CleanDockerNetwork remove docker network if created for this pipeline.
