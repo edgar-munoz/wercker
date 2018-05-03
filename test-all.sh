@@ -43,6 +43,7 @@ pullImages () {
   pullIfNeeded "golang"
   pullIfNeeded "postgres:9.6"
   pullIfNeeded "elasticsearch"
+  pullIfNeeded "interactivesolutions/eatmydata-mysql-server"
 }
 
 basicTest() {

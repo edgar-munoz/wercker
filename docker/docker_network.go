@@ -185,7 +185,7 @@ func (b *DockerBox) prepareDockerNetworkName() (string, error) {
 			return dockerNetworkName, nil
 		}
 	}
-	err := fmt.Errorf("Unable to create unique network name")
+	err := fmt.Errorf("Unable to prepare unique network name")
 	b.logger.Errorln(err)
 	return "", err
 }
