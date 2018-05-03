@@ -287,7 +287,7 @@ func (s *DockerRunStep) CollectFile(a, b, c string, dst io.Writer) error {
 }
 
 // CollectArtifact NOP
-func (s *DockerRunStep) CollectArtifact(string) (*core.Artifact, error) {
+func (s *DockerRunStep) CollectArtifact(context.Context, string) (*core.Artifact, error) {
 	return nil, nil
 }
 

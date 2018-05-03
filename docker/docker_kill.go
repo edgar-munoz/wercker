@@ -113,7 +113,7 @@ func (s *DockerKillStep) CollectFile(a, b, c string, dst io.Writer) error {
 }
 
 // CollectArtifact NOP
-func (s *DockerKillStep) CollectArtifact(string) (*core.Artifact, error) {
+func (s *DockerKillStep) CollectArtifact(context.Context, string) (*core.Artifact, error) {
 	return nil, nil
 }
 
