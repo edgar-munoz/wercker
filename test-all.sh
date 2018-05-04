@@ -113,53 +113,14 @@ testScratchPush () {
   fi
 }
 
-testDockerNetworks () {
-  echo -n "testing docker-n-networks.."
-  testDir=$testsDir/docker-n-networks
-  logFile="${workingDir}/docker-n-networks.log"
-
-  $wercker build "$testDir" --docker-local --working-dir "$workingDir" &> "$logFile"
-  if [ $? -eq 0 ]; then
-    echo "passed"
-    return 0
-  else
-      echo 'failed'
-      cat "$logFile"
-      docker images
-      return 1
-  fi
-}
-
-testDockerKill () {
-  echo -n "testing docker-kill.."
-  testDir=$testsDir/docker-kill
-  logFile="${workingDir}/docker-kill.log"
-  $wercker build "$testDir" --docker-local --working-dir "$workingDir" &> "$logFile"
-  if [ $? -eq 0 ]; then
-    cName=`docker ps -a | grep myTestContainer | awk '{print $NF}'`
-    if [ ! "$cName" ]; then
-      echo "passed"
-      return 0
-    else
-      echo 'failed'
-      cat "$logFile"
-      docker images
-      return 1
-    fi
-  else
-    echo 'failed'
-    cat "$logFile"
-    docker images
-    return 1
-  fi
-}
-
 
 runTests() {
 
   source $testsDir/docker-push/test.sh || return 1
   source $testsDir/docker-build/test.sh || return 1
   source $testsDir/docker-push-image/test.sh || return 1
+  source $testsDir/docker-networks/test.sh || return 1
+  source $testsDir/docker-kill/test.sh || return 1
 
   export X_TEST_SERVICE_VOL_PATH=$testsDir/test-service-vol
   basicTest "docker run" build "$testsDir/docker-run" --docker-local || return 1
@@ -199,8 +160,6 @@ runTests() {
 
   testDirectMount || return 1
   testScratchPush || return 1
-  testDockerNetworks || return 1
-  testDockerKill || return 1
 
   # test runs locally but not in wercker build container
   #basicTest "shellstep" build --docker-local --enable-dev-steps "$testsDir/shellstep" || return 1
