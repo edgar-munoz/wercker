@@ -268,7 +268,6 @@ func (cp *RunnerParams) startTheContainer(name string, cmd []string) error {
 	args = append(args, "--detach")
 	args = append(args, "--name")
 	args = append(args, name)
-	//args = append(args, "--log-opt tag={{.Name}}")
 	args = append(args, "-e")
 	args = append(args, fmt.Sprintf("WERCKER_RUNNER_TOKEN=%s", cp.BearerToken))
 	for _, label := range labels {
