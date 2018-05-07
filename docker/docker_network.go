@@ -44,15 +44,14 @@ func (b *DockerBox) GetDockerNetworkName() (string, error) {
 			}
 		}
 		return b.options.DockerNetworkName, nil
-	} else {
-		client := b.client
-		_, err := client.NetworkInfo(dockerNetworkName)
-		if err != nil {
-			b.logger.Errorln("Network does not exist", err)
-			return "", err
-		}
-		return dockerNetworkName, nil
 	}
+	client := b.client
+	_, err := client.NetworkInfo(dockerNetworkName)
+	if err != nil {
+		b.logger.Errorln("Network does not exist", err)
+		return "", err
+	}
+	return dockerNetworkName, nil
 }
 
 // CleanDockerNetwork remove docker network if created for this pipeline.

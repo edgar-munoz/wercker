@@ -38,11 +38,8 @@ type DockerKillStep struct {
 func NewDockerKillStep(stepConfig *core.StepConfig, options *core.PipelineOptions, dockerOptions *Options) (*DockerKillStep, error) {
 	name := "docker-kill"
 	displayName := "docker kill"
-	if stepConfig.Name != "" {
-		displayName = stepConfig.Name
-
-	} else {
-		err := fmt.Errorf("\"name\" is a required field. Please provide an name.")
+	if stepConfig.Name == "" {
+		err := fmt.Errorf("\"name\" is a required field")
 		return nil, err
 	}
 	// Add a random number to the name to prevent collisions on disk
@@ -88,7 +85,7 @@ func (s *DockerKillStep) Execute(ctx context.Context, sess *core.Session) (int, 
 	killOpts := docker.KillContainerOptions{
 		ID: containerToKill,
 	}
-	s.logger.Debugln("kill container:", containerToKill)
+	s.logger.Debugln("Kill container:", containerToKill)
 	err = client.KillContainer(killOpts)
 	if err != nil {
 		s.logger.Errorln("Failed to kill container", err)
@@ -103,7 +100,7 @@ func (s *DockerKillStep) Execute(ctx context.Context, sess *core.Session) (int, 
 		s.logger.Errorln("Failed to remove container", err)
 		return -1, err
 	}
-	s.logger.WithField("container-name", s.containerName).Debug("Docker-kill completed")
+	s.logger.WithField("containerName", s.containerName).Debug("Docker-kill completed")
 	return 0, nil
 }
 

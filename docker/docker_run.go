@@ -57,13 +57,11 @@ type BoxDockerRun struct {
 func NewDockerRunStep(stepConfig *core.StepConfig, options *core.PipelineOptions, dockerOptions *Options) (*DockerRunStep, error) {
 	name := "docker-run"
 	displayName := "docker run"
-	originalContainerName := name
-	if stepConfig.Name != "" {
-		originalContainerName = stepConfig.Name
-	} else {
-		err := fmt.Errorf("\"name\" is a required field. Please provide an name.")
+	if stepConfig.Name == "" {
+		err := fmt.Errorf("\"name\" is a required field")
 		return nil, err
 	}
+	originalContainerName := stepConfig.Name
 
 	// Add a random number to the name to prevent collisions on disk
 	stepSafeID := fmt.Sprintf("%s-%s", name, uuid.NewRandom().String())
@@ -98,12 +96,12 @@ func (s *DockerRunStep) configure(env *util.Environment) error {
 	if s.options.ExposePorts {
 		if ports, ok := s.data["ports"]; ok {
 			parts, err := shlex.Split(ports)
-			if err == nil {
-				s.PortBindings = portBindings(parts)
-				s.ExposedPorts = exposedPorts(parts)
-			} else {
+			if err != nil {
 				return err
 			}
+			s.PortBindings = portBindings(parts)
+			s.ExposedPorts = exposedPorts(parts)
+
 		}
 	}
 
@@ -114,43 +112,39 @@ func (s *DockerRunStep) configure(env *util.Environment) error {
 	image, err := getCorrectImageName(env, s)
 	if err != nil {
 		return err
-	} else {
-		s.Image = image
 	}
+	s.Image = image
 
 	s.OriginalContainerName = env.Interpolate(s.OriginalContainerName)
 	s.ContainerName = s.options.RunID + s.OriginalContainerName
 
 	if cmd, ok := s.data["cmd"]; ok {
 		parts, err := shlex.Split(cmd)
-		if err == nil {
-			s.Cmd = parts
-		} else {
+		if err != nil {
 			return err
 		}
+		s.Cmd = parts
 	}
 
 	if entryPoint, ok := s.data["entrypoint"]; ok {
 		parts, err := shlex.Split(entryPoint)
-		if err == nil {
-			s.EntryPoint = parts
-		} else {
+		if err != nil {
 			return err
 		}
+		s.EntryPoint = parts
 	}
 
 	if envi, ok := s.data["env"]; ok {
 		parsedEnv, err := shlex.Split(envi)
 
-		if err == nil {
-			interpolatedEnv := make([]string, len(parsedEnv))
-			for i, envVar := range parsedEnv {
-				interpolatedEnv[i] = env.Interpolate(envVar)
-			}
-			s.env = interpolatedEnv
-		} else {
+		if err != nil {
 			return err
 		}
+		interpolatedEnv := make([]string, len(parsedEnv))
+		for i, envVar := range parsedEnv {
+			interpolatedEnv[i] = env.Interpolate(envVar)
+		}
+		s.env = interpolatedEnv
 	}
 
 	if user, ok := s.data["user"]; ok {
@@ -166,7 +160,7 @@ func (s *DockerRunStep) configure(env *util.Environment) error {
 func getCorrectImageName(env *util.Environment, s *DockerRunStep) (string, error) {
 	i := env.Interpolate(s.data["image"])
 	if i == "" {
-		err := fmt.Errorf("\"image\" is a required field. Please provide an image.")
+		err := fmt.Errorf("\"image\" is a required field")
 		return "", err
 	}
 
@@ -179,9 +173,9 @@ func getCorrectImageName(env *util.Environment, s *DockerRunStep) (string, error
 	image, err := client.InspectImage(s.options.RunID + i)
 	if err != nil {
 		return i, nil
-	} else {
-		return image.ID, nil
 	}
+	return image.ID, nil
+
 }
 
 // NewBoxDockerRun gives a wrapper for a box.
