@@ -1,5 +1,7 @@
 ## unreleased
 
+- Docker file integration, docker-networks, docker-run, docker-kill (#405)
+
 ## v1.0.1216 (2018-05-01)
 
 - Add Oracle Contributor Agreement (#400)
