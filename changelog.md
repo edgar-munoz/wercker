@@ -1,5 +1,6 @@
 ## unreleased
 
+- Cosmetic changes for docker file integration (#407)
 - Docker file integration, docker-networks, docker-run, docker-kill (#405)
 
 ## v1.0.1216 (2018-05-01)
