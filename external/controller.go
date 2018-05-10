@@ -270,6 +270,12 @@ func (cp *RunnerParams) startTheContainer(name string, cmd []string) error {
 	args = append(args, name)
 	args = append(args, "-e")
 	args = append(args, fmt.Sprintf("WERCKER_RUNNER_TOKEN=%s", cp.BearerToken))
+	args = append(args, "-e")
+	args = append(args, "HTTP_PROXY=http://www-proxy-hqdc.us.oracle.com:80")
+	args = append(args, "-e")
+	args = append(args, "HTTPS_PROXY=http://www-proxy-hqdc.us.oracle.com:80")
+	args = append(args, "-e")
+	args = append(args, "NO_PROXY=localhost,127.0.0.1,.c9dev1.oc9qadev.com,.c9dev1.oraclecorp.com,.us.oracle.com,.oraclecorp.com,.login-stage.oracle.com")
 	for _, label := range labels {
 		args = append(args, "--label")
 		args = append(args, label)
