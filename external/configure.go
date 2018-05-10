@@ -44,7 +44,7 @@ func (cp *RunnerParams) getLocalImage() (*docker.Image, error) {
 	var latest int64 = 0
 	for _, image := range images {
 		for _, slice := range image.RepoTags {
-			if strings.Contains(slice, "wercker/wercker-runner:external-runner") {
+			if strings.Contains(slice, "wercker/wercker-runner:") {
 				if latest < image.Created {
 					latest = image.Created
 					imageName = slice
