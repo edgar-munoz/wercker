@@ -97,6 +97,18 @@ func (cp *RunnerParams) RunDockerController(statusOnly bool) {
 	}
 	cp.client = cli
 
+	// Pickup proper image from local repository to be used for this run. WE are not checking
+	// for a newer version from the remote repository.
+	image, err := cp.getLocalImage()
+	if err != nil {
+		cp.Logger.Fatal(fmt.Sprintf("unable to access external runner Docker image: %s", err))
+		return
+	}
+	if image == nil {
+		cp.Logger.Fatal("No external runner image exists in your local Docker repository. Use wercker runner configure command.")
+		return
+	}
+
 	// Get the list of running containers and determine if there are already
 	// any running for the runner instance name.
 	clist, err := cp.client.ListContainers(docker.ListContainersOptions{
@@ -171,7 +183,15 @@ func (cp *RunnerParams) RunDockerController(statusOnly bool) {
 	cp.Logger.Info(message)
 
 	if !cp.NoWait {
+		// Foreground processing. The Wercker command continues to run while
+		// there are runner containers active.
 		cp.waitForExternalRunners()
+	} else {
+		// Background processing, all the containers are started but logs are not
+		// written because the Wecker command is ending and we cannot spawn
+		// loggers to output the logs from the containers. Log information must
+		// be obtained using the docker log command.
+		cp.Logger.Info("Use the Wercker runner stop command with the same name to terminate the started external runners.")
 	}
 }
 
@@ -262,14 +282,32 @@ func (cp *RunnerParams) startTheContainer(name string, cmd []string) error {
 		volumes = append(volumes, fmt.Sprintf("%s:%s:rw", cp.StorePath, cp.StorePath))
 	}
 
+	myenv := []string{}
+	myenv = append(myenv, fmt.Sprintf("WERCKER_RUNNER_TOKEN=%s", cp.BearerToken))
+
+	// Pickup proxies...
+	for _, env := range os.Environ() {
+		if strings.HasPrefix(env, "http_proxy") || strings.HasPrefix(env, "HTTP_PROXY") {
+			myenv = append(myenv, env)
+		}
+		if strings.HasPrefix(env, "https_proxy") || strings.HasPrefix(env, "HTTPS_PROXY") {
+			myenv = append(myenv, env)
+		}
+		if strings.HasPrefix(env, "no_proxy") || strings.HasPrefix(env, "NO_PROXY") {
+			myenv = append(myenv, env)
+		}
+	}
+
 	// This is a super Kludge until go-dockerclient is updated to support mounts.
 
 	args = append(args, "run")
 	args = append(args, "--detach")
 	args = append(args, "--name")
 	args = append(args, name)
-	args = append(args, "-e")
-	args = append(args, fmt.Sprintf("WERCKER_RUNNER_TOKEN=%s", cp.BearerToken))
+	for _, envvar := range myenv {
+		args = append(args, "-e")
+		args = append(args, envvar)
+	}
 	for _, label := range labels {
 		args = append(args, "--label")
 		args = append(args, label)
@@ -291,6 +329,7 @@ func (cp *RunnerParams) startTheContainer(name string, cmd []string) error {
 
 	message := fmt.Sprintf("External runner %s has started.", name)
 	cp.Logger.Print(message)
+	cp.Logger.Debug(fmt.Sprintf("Docker image: %s", cp.ImageName))
 
 	// Remember the container
 	// Wait a second because the docker api doesn't set the container id immediately
