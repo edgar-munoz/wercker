@@ -79,19 +79,34 @@ func (cp *RunnerParams) CheckRegistryImages() error {
 
 	// Get the local image for the runner
 	localImage, err := cp.getLocalImage()
-
-	imageList, err := cp.getRemoteImages()
-	for _, remoteImage := range imageList {
-		cp.Logger.Infoln(fmt.Sprintf("%s %s", remoteImage.tag, remoteImage.timestamp))
-	}
-
 	if err != nil {
 		cp.Logger.Fatal(err)
+		return err
 	}
+
+	// Get the latest image from the OCIR repository
+	remoteImage, _ := cp.getRemoteImage()
+	if remoteImage.ImageName != "" && localImage != nil {
+		// See if remote image is newer
+		if remoteImage.Created.After(localImage.Created) {
+
+			if cp.Update {
+				return cp.pullNewerImage(remoteImage.ImageName)
+			} else {
+				message := "There is a newer external runner image available."
+				cp.Logger.Info(message)
+				cp.Logger.Info(fmt.Sprintf("ImageName: %s - created: %s",
+					remoteImage.ImageName, remoteImage.Created))
+				return nil
+			}
+		}
+	}
+
 	if localImage == nil {
 		cp.Logger.Fatal("No docker external runner image exists in the local repository.")
+	} else {
+		message := fmt.Sprintf("Docker image %s is up-to-date, created: %s", cp.ImageName, localImage.Created)
+		cp.Logger.Print(message)
 	}
-	message := fmt.Sprintf("Docker image %s is up-to-date, created: %s", cp.ImageName, localImage.Created)
-	cp.Logger.Print(message)
 	return nil
 }

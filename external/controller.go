@@ -58,6 +58,7 @@ type RunnerParams struct {
 	Journal        bool   // journal logging
 	AllOption      bool   // --all option
 	NoWait         bool   // --nowait options
+	Update         bool   // configure --update option
 	PollFreq       int    // Polling frequency
 	DockerEndpoint string // docker enndpoint
 	// following values are set during processing
@@ -287,14 +288,14 @@ func (cp *RunnerParams) startTheContainer(name string, cmd []string) error {
 
 	// Pickup proxies...
 	for _, env := range os.Environ() {
-		if strings.HasPrefix(env, "http_proxy") || strings.HasPrefix(env, "HTTP_PROXY") {
-			myenv = append(myenv, env)
-		}
-		if strings.HasPrefix(env, "https_proxy") || strings.HasPrefix(env, "HTTPS_PROXY") {
-			myenv = append(myenv, env)
-		}
-		if strings.HasPrefix(env, "no_proxy") || strings.HasPrefix(env, "NO_PROXY") {
-			myenv = append(myenv, env)
+		if strings.HasPrefix(env, "http_proxy") || strings.HasPrefix(env, "HTTP_PROXY") ||
+			strings.HasPrefix(env, "https_proxy") || strings.HasPrefix(env, "HTTPS_PROXY") ||
+			strings.HasPrefix(env, "no_proxy") || strings.HasPrefix(env, "NO_PROXY") {
+			// Don't set unless there is really significant data
+			tokens := strings.Split(env, "=")
+			if len(tokens[1]) > 4 {
+				myenv = append(myenv, env)
+			}
 		}
 	}
 

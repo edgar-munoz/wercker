@@ -456,6 +456,7 @@ func setupExternalRunnerParams(c *cli.Context, params *external.RunnerParams) er
 	params.BearerToken = opts.BearerToken
 	// Pickup global options that apply to runner assuming these are passed
 	// to the runner service
+	params.Update = opts.Update
 	params.Debug = opts.GlobalOptions.Debug
 	params.Journal = opts.GlobalOptions.Journal
 	params.AllOption = opts.AllOption
