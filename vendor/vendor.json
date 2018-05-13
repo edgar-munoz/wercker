@@ -121,6 +121,12 @@
 			"revisionTime": "2012-06-04T00:48:16Z"
 		},
 		{
+			"checksumSHA1": "jtbaBG/rd1lbQ9N0KfzC7IiIIMI=",
+			"path": "github.com/SKAhack/go-shortid",
+			"revision": "24d054c393feb4d0a6514de8a9951a26fedf0d85",
+			"revisionTime": "2014-08-27T05:08:53Z"
+		},
+		{
 			"checksumSHA1": "7oJ+tBkFGffV4LP/fDBbFb/XTVw=",
 			"path": "github.com/aws/aws-sdk-go/aws",
 			"revision": "96feaee0a1328835f6336932f48ba7c90df90244",

@@ -42,6 +42,13 @@ func NewStep(config *core.StepConfig, options *core.PipelineOptions, dockerOptio
 	if config.ID == "internal/publish-step" {
 		return NewPublishStep(config, options, dockerOptions)
 	}
+	if config.ID == "internal/docker-run" {
+		return NewDockerRunStep(config, options, dockerOptions)
+	}
+	if config.ID == "internal/docker-kill" {
+		return NewDockerKillStep(config, options, dockerOptions)
+	}
+
 	if strings.HasPrefix(config.ID, "internal/") {
 		if !options.EnableDevSteps {
 			util.RootLogger().Warnln("Ignoring dev step:", config.ID)

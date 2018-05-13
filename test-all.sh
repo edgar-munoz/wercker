@@ -42,6 +42,8 @@ pullImages () {
   pullIfNeeded "ubuntu"
   pullIfNeeded "golang"
   pullIfNeeded "postgres:9.6"
+  pullIfNeeded "elasticsearch"
+  pullIfNeeded "interactivesolutions/eatmydata-mysql-server"
 }
 
 basicTest() {
@@ -117,8 +119,11 @@ runTests() {
   source $testsDir/docker-push/test.sh || return 1
   source $testsDir/docker-build/test.sh || return 1
   source $testsDir/docker-push-image/test.sh || return 1
+  source $testsDir/docker-networks/test.sh || return 1
+  source $testsDir/docker-kill/test.sh || return 1
 
   export X_TEST_SERVICE_VOL_PATH=$testsDir/test-service-vol
+  basicTest "docker run" build "$testsDir/docker-run" --docker-local || return 1
   basicTest "service volume"    build "$testsDir/service-volume" --docker-local --enable-volumes  || return 1
   grep -q "test-volume-file" "${workingDir}/service volume.log" || return 1
   basicTest "source-path"       build "$testsDir/source-path" --docker-local || return 1

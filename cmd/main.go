@@ -1160,6 +1160,7 @@ func executePipeline(cmdCtx context.Context, options *core.PipelineOptions, dock
 	stepCounter := &util.Counter{Current: 3}
 	checkpoint := false
 	for _, step := range pipeline.Steps() {
+		defer step.Clean()
 		// we always want to run the wercker-init step to provide some functions
 		if !checkpoint && stepCounter.Current > 3 {
 			if options.EnableDevSteps && options.Checkpoint != "" {
