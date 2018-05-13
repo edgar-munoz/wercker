@@ -40,7 +40,12 @@ func NewArtificer(options *core.PipelineOptions, dockerOptions *Options) *Artifi
 
 	var store core.Store
 	if options.ShouldStoreS3 {
-		store = core.NewS3Store(options.AWSOptions)
+		if options.GlobalOptions.LocalFileStore != "" {
+			store = core.NewFileStore(options, options.GlobalOptions.LocalFileStore)
+			logger.Debug("Activating local-file-store")
+		} else {
+			store = core.NewS3Store(options.AWSOptions)
+		}
 	}
 
 	return &Artificer{

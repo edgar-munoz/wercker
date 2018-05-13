@@ -180,8 +180,10 @@ func (cp *RunnerParams) RunDockerController(statusOnly bool) {
 	}
 
 	cp.startTheRunners()
-	message := fmt.Sprintf("Output is written to the %s directory", cp.StorePath)
-	cp.Logger.Info(message)
+	if cp.StorePath != "" {
+		message := fmt.Sprintf("Output is written to the %s directory", cp.StorePath)
+		cp.Logger.Info(message)
+	}
 
 	if !cp.NoWait {
 		// Foreground processing. The Wercker command continues to run while
@@ -249,6 +251,7 @@ func (cp *RunnerParams) createTheRunnerCommand(name string) ([]string, error) {
 	}
 	if cp.Debug == true {
 		cmd = append(cmd, "-d")
+		cmd = append(cmd, "--showlogs")
 	}
 	if cp.Journal == true {
 		cmd = append(cmd, "--journal")
@@ -285,6 +288,18 @@ func (cp *RunnerParams) startTheContainer(name string, cmd []string) error {
 
 	myenv := []string{}
 	myenv = append(myenv, fmt.Sprintf("WERCKER_RUNNER_TOKEN=%s", cp.BearerToken))
+
+	if cp.StorePath == "" {
+		awskey1 := os.Getenv("AWS_ACCESS_KEY_ID")
+		awskey2 := os.Getenv("AWS_SECRET_ACCESS_KEY")
+		if awskey1 == "" || awskey2 == "" {
+			cp.Logger.Fatal("Missing AWS S3 access credentials")
+		}
+		awsfullkey1 := fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", awskey1)
+		awsfullkey2 := fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", awskey2)
+		myenv = append(myenv, awsfullkey1)
+		myenv = append(myenv, awsfullkey2)
+	}
 
 	// Pickup proxies...
 	for _, env := range os.Environ() {

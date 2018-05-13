@@ -48,6 +48,9 @@ type GlobalOptions struct {
 	// Auth
 	AuthToken      string
 	AuthTokenStore string
+
+	// local-file-store
+	LocalFileStore string
 }
 
 // guessAuthToken will attempt to read from the token store location if
@@ -85,6 +88,8 @@ func NewGlobalOptions(c util.Settings, e *util.Environment) (*GlobalOptions, err
 	authTokenStore = util.ExpandHomePath(authTokenStore, e.Get("HOME"))
 	authToken := guessAuthToken(c, e, authTokenStore)
 
+	localFileStore, _ := c.String("local-file-store")
+
 	// If debug is true, than force verbose and do not use colors.
 	if debug {
 		verbose = true
@@ -101,6 +106,8 @@ func NewGlobalOptions(c util.Settings, e *util.Environment) (*GlobalOptions, err
 
 		AuthToken:      authToken,
 		AuthTokenStore: authTokenStore,
+
+		LocalFileStore: localFileStore,
 	}, nil
 }
 
@@ -976,9 +983,12 @@ func NewExternalRunnerOptions(c util.Settings, e *util.Environment) (*WerckerRun
 		dhost = "unix:///var/run/docker.sock"
 	}
 
-	if spath == "" {
-		spath = "/tmp/wercker"
-	}
+	// Commented out local filesystem default. With this removed
+	// pipelines will either default to S3 or use the specified
+	// location in the local filesystem.
+	//if spath == "" {
+	//	spath = "/tmp/wercker"
+	//}
 	os.MkdirAll(spath, 0776)
 
 	return &WerckerRunnerOptions{
