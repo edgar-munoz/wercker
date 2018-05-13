@@ -54,6 +54,7 @@ var (
 	// These flags control where we store local files
 	LocalPathFlags = []cli.Flag{
 		cli.StringFlag{Name: "working-dir", Value: "./.wercker", Usage: "Path where we store working files.", EnvVar: "WERCKER_WORKING_DIR"},
+		cli.StringFlag{Name: "local-file-store", Usage: "Path where external runner stores pipeline files"},
 	}
 
 	// These flags control paths on the guest and probably shouldn't change

@@ -212,6 +212,18 @@ func (cp *RunnerParams) startTheRunners() {
 		cp.BearerToken = token
 	}
 
+	// Add sanity checks to make sure storepath and logpath actually exist. Without this
+	// check a path with a type will result in a silent mount error when the container
+	// is started. It will appear that the external runner is hung.
+	if !checkPathExists(cp.StorePath) {
+		cp.Logger.Fatal(fmt.Sprintf("Local storage path %s does not exist", cp.StorePath))
+		return
+	}
+	if !checkPathExists(cp.LoggerPath) {
+		cp.Logger.Fatal(fmt.Sprintf("Log output path %s does not exist", cp.StorePath))
+		return
+	}
+
 	ct := 1
 	for i := cp.RunnerCount; i > 0; i-- {
 		runnerName := fmt.Sprintf("%s_%d", cp.Basename, ct)
@@ -245,9 +257,6 @@ func (cp *RunnerParams) createTheRunnerCommand(name string) ([]string, error) {
 	}
 	if cp.StorePath != "" {
 		cmd = append(cmd, fmt.Sprintf("--runner-store-path=%s", cp.StorePath))
-	}
-	if cp.LoggerPath != "" {
-		cmd = append(cmd, fmt.Sprintf("--runner-logs-path=%s", cp.LoggerPath))
 	}
 	if cp.Debug == true {
 		cmd = append(cmd, "-d")
@@ -563,4 +572,19 @@ func (cp *RunnerParams) logFromContainer(rc *runnerContainer) {
 	if err != nil {
 		log.Print(err)
 	}
+}
+
+func checkPathExists(path string) bool {
+
+	if path == "" {
+		return true
+	}
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
 }
