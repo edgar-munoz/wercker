@@ -271,7 +271,7 @@ var (
 		cli.StringFlag{Name: "storepath", Usage: "local file system path for storing runner output", EnvVar: "WERCKER_RUNNER_STOREPATH"},
 		cli.StringFlag{Name: "logpath", Usage: "local file system path for storing log files"},
 		cli.IntFlag{Name: "runners", Value: 1, Usage: "number of runners to start, default is one"},
-		cli.IntFlag{Name: "poll-frequency", Value: 15, Usage: "number of seconds between runner polling for a job"},
+		cli.IntFlag{Name: "poll-frequency", Value: 5, Usage: "number of seconds between runner polling for a job"},
 		cli.StringFlag{Name: "token", Usage: "bearer token for external runner", EnvVar: "WERCKER_RUNNER_TOKEN"},
 		cli.BoolFlag{Name: "all", Usage: "specify that all jobs allowed to the user are eligible for selection by this runner"},
 		cli.BoolFlag{Name: "nowait", Usage: "run the external runner(s) in the background, default is false"},

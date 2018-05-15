@@ -167,6 +167,7 @@ func (p *Runner) EnsureCode() (string, error) {
 			return projectDir, err
 		}
 	} else {
+
 		// We were pointed at a path with ProjectPath, copy it to projectDir
 
 		ignoreFiles := []string{
@@ -210,9 +211,16 @@ func (p *Runner) EnsureCode() (string, error) {
 			}
 			return ignores
 		}
+
+		// This is a hack to get rid of complaint that builds folder does not exist. 
+		if p.options.LocalFileStore != "" {
+			os.MkdirAll(fmt.Sprintf("%s/builds", p.options.WorkingDir), 0700)
+		}
+
 		copyOpts := &shutil.CopyTreeOptions{Ignore: ignoreFunc, CopyFunction: shutil.Copy, Symlinks: true}
 		os.Rename(projectDir, fmt.Sprintf("%s-%s", projectDir, uuid.NewRandom().String()))
 		p.logger.Printf(p.formatter.Info(copyingMessage, projectDir))
+
 		err = shutil.CopyTree(p.options.ProjectPath, projectDir, copyOpts)
 		if err != nil {
 			return projectDir, err
