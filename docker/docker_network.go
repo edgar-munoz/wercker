@@ -16,9 +16,6 @@ package dockerlocal
 
 import (
 	"fmt"
-	"math"
-	"strconv"
-	"strings"
 
 	shortid "github.com/SKAhack/go-shortid"
 	docker "github.com/fsouza/go-dockerclient"
@@ -98,7 +95,9 @@ func (b *DockerBox) createDockerNetwork(dockerNetworkName string) (*docker.Netwo
 	b.logger.Debugln("Creating docker network")
 	client := b.client
 	networkOptions := map[string]interface{}{
+		"com.docker.network.bridge.enable_icc":           "true",
 		"com.docker.network.bridge.enable_ip_masquerade": "true",
+		"com.docker.network.driver.mtu":                  "1500",
 	}
 	b.logger.WithFields(util.LogFields{
 		"Name": dockerNetworkName,
@@ -108,65 +107,6 @@ func (b *DockerBox) createDockerNetwork(dockerNetworkName string) (*docker.Netwo
 		CheckDuplicate: true,
 		Options:        networkOptions,
 	})
-}
-
-// Prepares and return DockerEnvironment variables list.
-// For each service In case of docker links, docker creates some environment variables and inject them to box container.
-// Since docker links is replaced by docker network, these environment variables needs to be created manually.
-// Below environment variables created and injected to box container.
-// 01) <container name>_PORT_<port>_<protocol>_ADDR  - variable contains the IP Address.
-// 02) <container name>_PORT_<port>_<protocol>_PORT - variable contains just the port number.
-// 03) <container name>_PORT_<port>_<protocol>_PROTO - variable contains just the protocol.
-// 04) <container name>_ENV_<name> - Docker also exposes each Docker originated environment variable from the source container as an environment variable in the target.
-// 05) <container name>_PORT - variable contains the URL of the source container’s first exposed port. The ‘first’ port is defined as the exposed port with the lowest number.
-// 06) <container name>_NAME - variable is set for each service specified in wercker.yml.
-func (b *DockerBox) prepareSvcDockerEnvVar(env *util.Environment) ([]string, error) {
-	serviceEnv := []string{}
-	client := b.client
-	for _, service := range b.services {
-		serviceName := strings.Replace(service.GetServiceAlias(), "-", "_", -1)
-		if containerID := service.GetID(); containerID != "" {
-			container, err := client.InspectContainer(containerID)
-			if err != nil {
-				b.logger.Error("Error while inspecting container", err)
-				return nil, err
-			}
-			ns := container.NetworkSettings
-			var serviceIPAddress string
-			for _, v := range ns.Networks {
-				serviceIPAddress = v.IPAddress
-				break
-			}
-			serviceEnv = append(serviceEnv, fmt.Sprintf("%s_NAME=/%s/%s", strings.ToUpper(serviceName), b.getContainerName(), serviceName))
-			lowestPort := math.MaxInt32
-			var protLowestPort string
-			for k := range container.Config.ExposedPorts {
-				exposedPort := strings.Split(string(k), "/") //exposedPort[0]=portNum and exposedPort[1]=protocal(tcp/udp)
-				x, err := strconv.Atoi(exposedPort[0])
-				if err != nil {
-					b.logger.Error("Unable to convert string port to integer", err)
-					return nil, err
-				}
-				if lowestPort > x {
-					lowestPort = x
-					protLowestPort = exposedPort[1]
-				}
-				dockerEnvPrefix := fmt.Sprintf("%s_PORT_%s_%s", strings.ToUpper(serviceName), exposedPort[0], strings.ToUpper(exposedPort[1]))
-				serviceEnv = append(serviceEnv, fmt.Sprintf("%s=%s://%s:%s", dockerEnvPrefix, exposedPort[1], serviceIPAddress, exposedPort[0]))
-				serviceEnv = append(serviceEnv, fmt.Sprintf("%s_ADDR=%s", dockerEnvPrefix, serviceIPAddress))
-				serviceEnv = append(serviceEnv, fmt.Sprintf("%s_PORT=%s", dockerEnvPrefix, exposedPort[0]))
-				serviceEnv = append(serviceEnv, fmt.Sprintf("%s_PROTO=%s", dockerEnvPrefix, exposedPort[1]))
-			}
-			if protLowestPort != "" {
-				serviceEnv = append(serviceEnv, fmt.Sprintf("%s_PORT=%s://%s:%s", strings.ToUpper(serviceName), protLowestPort, serviceIPAddress, strconv.Itoa(lowestPort)))
-			}
-			for _, envVar := range container.Config.Env {
-				serviceEnv = append(serviceEnv, fmt.Sprintf("%s_ENV_%s", strings.ToUpper(serviceName), envVar))
-			}
-		}
-	}
-	b.logger.Debug("Exposed Service Evnironment variables", serviceEnv)
-	return serviceEnv, nil
 }
 
 // Generate docker network name and check if same is already in use. In case name is already in use then it regenerate it upto 3 times before throwing error.

@@ -106,7 +106,7 @@ func (b *InternalServiceBox) getContainerName() string {
 }
 
 // Run executes the service
-func (b *InternalServiceBox) Run(ctx context.Context, env *util.Environment) (*docker.Container, error) {
+func (b *InternalServiceBox) Run(ctx context.Context, env *util.Environment, envVars []string) (*docker.Container, error) {
 	e, err := core.EmitterFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -120,6 +120,7 @@ func (b *InternalServiceBox) Run(ctx context.Context, env *util.Environment) (*d
 
 	// Import the environment and command
 	myEnv := dockerEnv(b.config.Env, env)
+	myEnv = append(myEnv, envVars...)
 
 	origEntrypoint := b.image.Config.Entrypoint
 	origCmd := b.image.Config.Cmd
