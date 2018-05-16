@@ -99,6 +99,8 @@ func (b *DockerBox) createDockerNetwork(dockerNetworkName string) (*docker.Netwo
 	client := b.client
 	networkOptions := map[string]interface{}{
 		"com.docker.network.bridge.enable_ip_masquerade": "true",
+		"com.docker.network.bridge.enable_icc": "true",
+		"com.docker.network.driver.mtu": "1500",
 	}
 	b.logger.WithFields(util.LogFields{
 		"Name": dockerNetworkName,
