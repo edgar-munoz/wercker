@@ -85,28 +85,43 @@ func (cp *RunnerParams) CheckRegistryImages() error {
 	}
 
 	// Get the latest image from the OCIR repository
-	remoteImage, _ := cp.getRemoteImage()
-	if remoteImage.ImageName != "" && localImage != nil {
-		// See if remote image is newer
-		if remoteImage.Created.After(localImage.Created) {
+	remoteImage, err := cp.getRemoteImage()
+	if err != nil {
+		cp.Logger.Fatalln("Unable to access remote repository", err)
+		return err
+	}
 
-			if cp.Update {
+	// See if there is a remote image available to check against.
+	if remoteImage.ImageName != "" {
+		// See if remote image is newer
+		if localImage == nil && cp.PullRemote {
+			return cp.pullNewerImage(remoteImage.ImageName)
+		}
+
+		if localImage != nil && remoteImage.Created.After(localImage.Created) &&
+			remoteImage.ImageName != cp.ImageName {
+
+			// Remote has an image that is newer
+			if cp.PullRemote {
 				return cp.pullNewerImage(remoteImage.ImageName)
 			} else {
-				message := "There is a newer external runner image available."
+				message := "There is a newer external runner image available from Oracle."
 				cp.Logger.Info(message)
-				cp.Logger.Info(fmt.Sprintf("ImageName: %s - created: %s",
+				cp.Logger.Info(fmt.Sprintf("Image: %s, created: %s",
 					remoteImage.ImageName, remoteImage.Created))
+				cp.Logger.Infoln("Execute \"wercker runner configure --pull\" to update your system.")
 				return nil
 			}
 		}
 	}
 
 	if localImage == nil {
-		cp.Logger.Fatal("No docker external runner image exists in the local repository.")
+		cp.Logger.Infoln("No Docker external runner image exists in the local repository.")
+		cp.Logger.Fatal("Execute \"wercker runner configure --pull\" to pull the required image.")
 	} else {
-		message := fmt.Sprintf("Docker image %s is up-to-date, created: %s", cp.ImageName, localImage.Created)
-		cp.Logger.Print(message)
+		message := "Local Docker repository external runner image is up-to-date."
+		cp.Logger.Infoln(message)
+		cp.Logger.Infoln(fmt.Sprintf("Image: %s, created: %s", cp.ImageName, localImage.Created))
 	}
 	return nil
 }

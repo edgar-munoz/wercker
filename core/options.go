@@ -955,7 +955,7 @@ type WerckerRunnerOptions struct {
 	Polling        int
 	AllOption      bool
 	NoWait         bool
-	Update         bool
+	PullRemote     bool
 }
 
 // NewExternalRunnerOptions -
@@ -977,18 +977,16 @@ func NewExternalRunnerOptions(c util.Settings, e *util.Environment) (*WerckerRun
 	isall, _ := c.Bool("all")
 	dhost, _ := c.String("docker-host")
 	nwait, _ := c.Bool("nowait")
-	updat, _ := c.Bool("update")
+	pulls, _ := c.Bool("pull")
 
 	if dhost == "" {
 		dhost = "unix:///var/run/docker.sock"
 	}
 
-	// Commented out local filesystem default. With this removed
-	// pipelines will either default to S3 or use the specified
-	// location in the local filesystem.
-	//if spath == "" {
-	//	spath = "/tmp/wercker"
-	//}
+	// Force pipelines to use local file system.
+	if spath == "" {
+		spath = "/tmp/wercker"
+	}
 	os.MkdirAll(spath, 0776)
 
 	return &WerckerRunnerOptions{
@@ -1006,6 +1004,6 @@ func NewExternalRunnerOptions(c util.Settings, e *util.Environment) (*WerckerRun
 		AllOption:      isall,
 		NoWait:         nwait,
 		DockerEndpoint: dhost,
-		Update:         updat,
+		PullRemote:     pulls,
 	}, nil
 }

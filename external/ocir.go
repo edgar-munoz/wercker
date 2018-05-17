@@ -2,13 +2,14 @@
 
 package external
 
+// This module is used to access the remote Docker image repository on ocir.io
+
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	os "os"
+	"strings"
 	"time"
 
 	"github.com/fsouza/go-dockerclient"
@@ -42,12 +43,14 @@ type RemoteImage struct {
 	Timestamp string `json:"timestamp"`
 }
 
-// List wrapper for response payload
+// List wrapper for remote response payload
 type listWrapper struct {
 	Current CurrentImage  `json:"current"`
 	Imgs    []RemoteImage `json:"imgs"`
 }
 
+// Get the list of remote images from ocir.io and return information about the
+// most recently found image.
 func (cp *RunnerParams) getRemoteImage() (*LatestImage, error) {
 
 	resultToken, err := cp.getBearerToken()
@@ -66,7 +69,7 @@ func (cp *RunnerParams) getRemoteImage() (*LatestImage, error) {
 
 	var latestImageName string
 	var latestImageTime time.Time
-
+	// I hope this never changes...
 	basis := "iad.ocir.io/odx-pipelines/wercker/wercker-runner"
 
 	if resp.StatusCode == 200 {
@@ -97,24 +100,16 @@ func (cp *RunnerParams) getRemoteImage() (*LatestImage, error) {
 	}, nil
 }
 
+// Obtain the bearer token that is necessary to fetch the image list or pull
+// from the remote image repository. This function will return an anonymous
+// public token
 func (cp *RunnerParams) getBearerToken() (string, error) {
-
-	username := os.Getenv("WERCKER_OCIR_USERNAME")
-	password := os.Getenv("WERCKER_OCIR_PASSWORD")
-
-	if username == "" || password == "" {
-		return "", nil
-	}
-
-	auth := username + ":" + password
-	tokenAuth := base64.StdEncoding.EncodeToString([]byte(auth))
 
 	url := "https://iad.ocir.io/20180419/docker/token"
 
 	var client http.Client
 
 	req, err := http.NewRequest("GET", url, nil)
-	req.Header.Add("Authorization", "Basic"+tokenAuth)
 	resp, err := client.Do(req)
 
 	if err != nil {
@@ -143,17 +138,15 @@ func (cp *RunnerParams) getBearerToken() (string, error) {
 // repository as a manual rollback.
 func (cp *RunnerParams) pullNewerImage(imageName string) error {
 
-	username := os.Getenv("WERCKER_OCIR_USERNAME")
-	password := os.Getenv("WERCKER_OCIR_PASSWORD")
+	imageTokens := strings.Split(imageName, ":")
 
 	opts := docker.PullImageOptions{
-		Repository: "iad.ocir.io",
-		Registry:   "odx-pipelines",
-		Tag:        imageName,
+		Repository: imageTokens[0],
+		Tag:        imageTokens[1],
 	}
 	auth := docker.AuthConfiguration{
-		Username: username,
-		Password: password,
+		Username: "",
+		Password: "",
 	}
 	err := cp.client.PullImage(opts, auth)
 
@@ -161,8 +154,10 @@ func (cp *RunnerParams) pullNewerImage(imageName string) error {
 		message := fmt.Sprintf("Failed to update external runner image: %s", err)
 		cp.Logger.Error(message)
 	} else {
-		message := fmt.Sprintf("Pulled newer external runner image: %s", imageName)
-		cp.Logger.Info(message)
+		message := fmt.Sprintf("Pulled newer external runner Docker image")
+		cp.Logger.Infoln(message)
+		message = fmt.Sprintf("Image: %s", imageName)
+		cp.Logger.Infoln(message)
 	}
 	return err
 }

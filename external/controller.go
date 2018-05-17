@@ -58,7 +58,7 @@ type RunnerParams struct {
 	Journal        bool   // journal logging
 	AllOption      bool   // --all option
 	NoWait         bool   // --nowait options
-	Update         bool   // configure --update option
+	PullRemote     bool   // --pull option
 	PollFreq       int    // Polling frequency
 	DockerEndpoint string // docker enndpoint
 	// following values are set during processing
