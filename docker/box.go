@@ -201,7 +201,7 @@ func (b *DockerBox) RunServices(ctx context.Context, env *util.Environment) erro
 		if err != nil {
 			return err
 		}
-		svcEnvVar, err := b.prepareSvcDockerEnvVar(service, env)
+		svcEnvVar, err := b.prepareSvcDockerEnvVar(service, env, linkedEnvVars)
 		if err != nil {
 			return err
 		}
@@ -666,7 +666,7 @@ func (b *DockerBox) ExportImage(options *ExportImageOptions) error {
 // 04) <container name>_ENV_<name> - Docker also exposes each Docker originated environment variable from the source container as an environment variable in the target.
 // 05) <container name>_PORT - variable contains the URL of the source container’s first exposed port. The ‘first’ port is defined as the exposed port with the lowest number.
 // 06) <container name>_NAME - variable is set for each service specified in wercker.yml.
-func (b *DockerBox) prepareSvcDockerEnvVar(service core.ServiceBox, env *util.Environment) ([]string, error) {
+func (b *DockerBox) prepareSvcDockerEnvVar(service core.ServiceBox, env *util.Environment, linkedEnvVars []string) ([]string, error) {
 	serviceEnv := []string{}
 	client := b.client
 	serviceName := strings.Replace(service.GetServiceAlias(), "-", "_", -1)
@@ -706,9 +706,21 @@ func (b *DockerBox) prepareSvcDockerEnvVar(service core.ServiceBox, env *util.En
 			serviceEnv = append(serviceEnv, fmt.Sprintf("%s_PORT=%s://%s:%s", strings.ToUpper(serviceName), protLowestPort, serviceIPAddress, strconv.Itoa(lowestPort)))
 		}
 		for _, envVar := range container.Config.Env {
-			serviceEnv = append(serviceEnv, fmt.Sprintf("%s_ENV_%s", strings.ToUpper(serviceName), envVar))
+			if contains(linkedEnvVars, envVar) == false {
+				serviceEnv = append(serviceEnv, fmt.Sprintf("%s_ENV_%s", strings.ToUpper(serviceName), envVar))
+			}
 		}
 	}
 	b.logger.Debug("Exposed Service Evnironment variables", serviceEnv)
 	return serviceEnv, nil
+}
+
+// Returns true if envVar exist in envVaList.
+func contains(evnVarList []string, envVar string) bool {
+	for _, tmpVar := range evnVarList {
+		if tmpVar == envVar {
+			return true
+		}
+	}
+	return false
 }
