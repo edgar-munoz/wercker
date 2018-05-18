@@ -1,5 +1,7 @@
 ## unreleased
 
+- Docker file integration (#415)
+
 ## v1.0.1226 (2018-05-11)
 
 - Reverted Cosmetic changes for docker file integration (#407)
