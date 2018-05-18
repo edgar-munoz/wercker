@@ -31,6 +31,7 @@ func cmdStepPublish(opts *core.WerckerStepOptions) error {
 		Owner:     opts.Owner,
 		StepDir:   stepDir,
 		TempDir:   "",
+		Private:   opts.Private,
 	}
 	return stepscmd.PublishStep(publishOpts)
 }

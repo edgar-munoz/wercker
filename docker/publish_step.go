@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/fsouza/go-dockerclient"
 	"github.com/pborman/uuid"
@@ -34,6 +35,7 @@ import (
 type PublishStep struct {
 	*core.BaseStep
 	user            string
+	private         bool
 	endpoint        string
 	authToken       string
 	pathInContainer string
@@ -90,6 +92,12 @@ func (s *PublishStep) InitEnv(env *util.Environment) error {
 	if path, ok := s.data["path"]; ok {
 		s.pathInContainer = pathInContainer(path)
 	}
+	if privateProp, ok := s.data["private"]; ok {
+		private, err := strconv.ParseBool(privateProp)
+		if err == nil {
+			s.private = private
+		}
+	}
 	return nil
 }
 
@@ -128,6 +136,7 @@ func (s *PublishStep) Execute(ctx context.Context, sess *core.Session) (int, err
 		Endpoint:  s.endpoint,
 		AuthToken: s.authToken,
 		Owner:     s.user,
+		Private:   s.private,
 		StepDir:   stepDir,
 		TempDir:   runDir,
 	}

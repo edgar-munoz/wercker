@@ -184,6 +184,7 @@ var (
 	// Steps options
 	StepPublishFlags = []cli.Flag{
 		cli.StringFlag{Name: "owner", Value: "", Usage: "owner of the step, leave blank to use the token owner"},
+		cli.BoolFlag{Name: "private", Usage: "Publish the step as private; public by default."},
 	}
 
 	PullFlagSet = [][]cli.Flag{

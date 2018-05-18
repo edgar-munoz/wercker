@@ -51,6 +51,8 @@ type PublishStepRequest struct {
 	Manifest *StepManifest `json:"manifest,omitempty"`
 	// username
 	Username string `json:"username,omitempty"`
+	// specifies whether the step is private or public
+	Private bool `json:"private,omitempty"`
 }
 
 type PublishStepResponse struct {
@@ -64,12 +66,13 @@ type PublishStepResponse struct {
 }
 
 // PublishStep uses ps to create a new step using manifest, tarball.
-func PublishStep(ps Publisher, manifest *StepManifest, tarball io.Reader, username, checksum string, size int64) error {
+func PublishStep(ps Publisher, manifest *StepManifest, tarball io.Reader, username, checksum string, size int64, private bool) error {
 	createDraftRequest := &PublishStepRequest{
 		Username: username,
 		Manifest: manifest,
 		Checksum: checksum,
 		Size:     size,
+		Private:  private,
 	}
 
 	resp, err := ps.CreateDraft(createDraftRequest)

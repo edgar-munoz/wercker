@@ -29,6 +29,7 @@ type PublishStepOptions struct {
 	Endpoint  string
 	AuthToken string
 	Owner     string
+	Private   bool
 	StepDir   string
 	TempDir   string
 }
@@ -123,7 +124,7 @@ func publishStep(o *PublishStepOptions, manifest *steps.StepManifest, tarballPat
 
 	ps := steps.NewRESTPublisher(o.Endpoint, http.DefaultClient, stepsClient)
 
-	err = steps.PublishStep(ps, manifest, file, o.Owner, checksum, size)
+	err = steps.PublishStep(ps, manifest, file, o.Owner, checksum, size, o.Private)
 	if err != nil {
 		return errors.Wrap(err, "Unable to start publish flow")
 	}
