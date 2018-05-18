@@ -715,7 +715,7 @@ func (b *DockerBox) prepareSvcDockerEnvVar(service core.ServiceBox, env *util.En
 	return serviceEnv, nil
 }
 
-// Returns true if envVar exist in envVaList.
+// Returns true if envVar exist in envVarList.
 func contains(evnVarList []string, envVar string) bool {
 	for _, tmpVar := range evnVarList {
 		if tmpVar == envVar {
