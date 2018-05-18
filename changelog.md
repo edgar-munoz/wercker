@@ -2,6 +2,10 @@
 
 - Docker file integration (#415)
 
+## v1.0.1230 (2018-05-15)
+
+- Support for publishing private steps (#409)
+
 ## v1.0.1226 (2018-05-11)
 
 - Reverted Cosmetic changes for docker file integration (#407)
