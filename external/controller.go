@@ -220,7 +220,7 @@ func (cp *RunnerParams) startTheRunners() {
 		return
 	}
 	if !checkPathExists(cp.LoggerPath) {
-		cp.Logger.Fatal(fmt.Sprintf("Log output path %s does not exist", cp.StorePath))
+		cp.Logger.Fatal(fmt.Sprintf("Log output path %s does not exist", cp.LoggerPath))
 		return
 	}
 
