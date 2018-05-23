@@ -48,6 +48,9 @@ type GlobalOptions struct {
 	// Auth
 	AuthToken      string
 	AuthTokenStore string
+
+	// local-file-store
+	LocalFileStore string
 }
 
 // guessAuthToken will attempt to read from the token store location if
@@ -85,6 +88,8 @@ func NewGlobalOptions(c util.Settings, e *util.Environment) (*GlobalOptions, err
 	authTokenStore = util.ExpandHomePath(authTokenStore, e.Get("HOME"))
 	authToken := guessAuthToken(c, e, authTokenStore)
 
+	localFileStore, _ := c.String("local-file-store")
+
 	// If debug is true, than force verbose and do not use colors.
 	if debug {
 		verbose = true
@@ -101,6 +106,8 @@ func NewGlobalOptions(c util.Settings, e *util.Environment) (*GlobalOptions, err
 
 		AuthToken:      authToken,
 		AuthTokenStore: authTokenStore,
+
+		LocalFileStore: localFileStore,
 	}, nil
 }
 
@@ -949,7 +956,7 @@ type WerckerRunnerOptions struct {
 	Polling        int
 	AllOption      bool
 	NoWait         bool
-	Update         bool
+	PullRemote     bool
 }
 
 // NewExternalRunnerOptions -
@@ -971,12 +978,13 @@ func NewExternalRunnerOptions(c util.Settings, e *util.Environment) (*WerckerRun
 	isall, _ := c.Bool("all")
 	dhost, _ := c.String("docker-host")
 	nwait, _ := c.Bool("nowait")
-	updat, _ := c.Bool("update")
+	pulls, _ := c.Bool("pull")
 
 	if dhost == "" {
 		dhost = "unix:///var/run/docker.sock"
 	}
 
+	// Force pipelines to use local file system.
 	if spath == "" {
 		spath = "/tmp/wercker"
 	}
@@ -997,6 +1005,6 @@ func NewExternalRunnerOptions(c util.Settings, e *util.Environment) (*WerckerRun
 		AllOption:      isall,
 		NoWait:         nwait,
 		DockerEndpoint: dhost,
-		Update:         updat,
+		PullRemote:     pulls,
 	}, nil
 }

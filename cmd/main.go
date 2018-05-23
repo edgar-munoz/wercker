@@ -456,6 +456,7 @@ func setupExternalRunnerParams(c *cli.Context, params *external.RunnerParams) er
 	params.BearerToken = opts.BearerToken
 	// Pickup global options that apply to runner assuming these are passed
 	// to the runner service
+	params.PullRemote = opts.PullRemote
 	params.Debug = opts.GlobalOptions.Debug
 	params.Journal = opts.GlobalOptions.Journal
 	params.AllOption = opts.AllOption
@@ -1063,11 +1064,13 @@ func executePipeline(cmdCtx context.Context, options *core.PipelineOptions, dock
 	timer.Reset()
 	_, err = r.EnsureCode()
 	if err != nil {
-		e.Emit(core.Logs, &core.LogsArgs{
-			Stream: "stderr",
-			Logs:   err.Error() + "\n",
-		})
-		return nil, soft.Exit(err)
+		if r.options.LocalFileStore == "" {
+			e.Emit(core.Logs, &core.LogsArgs{
+				Stream: "stderr",
+				Logs:   err.Error() + "\n",
+			})
+			return nil, soft.Exit(err)
+		}
 	}
 	err = r.CleanupOldBuilds()
 	if err != nil {

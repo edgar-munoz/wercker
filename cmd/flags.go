@@ -55,6 +55,7 @@ var (
 	// These flags control where we store local files
 	LocalPathFlags = []cli.Flag{
 		cli.StringFlag{Name: "working-dir", Value: "./.wercker", Usage: "Path where we store working files.", EnvVar: "WERCKER_WORKING_DIR"},
+		cli.StringFlag{Name: "local-file-store", Usage: "Path where external runner stores pipeline files"},
 	}
 
 	// These flags control paths on the guest and probably shouldn't change
@@ -259,7 +260,7 @@ var (
 	}
 
 	ExternalRunnerConfigureFlags = []cli.Flag{
-		cli.StringFlag{Name: "update", Usage: "automatically update local image from remote repository"},
+		cli.BoolFlag{Name: "pull", Usage: "pull latest external runner image from the remote repository"},
 	}
 
 	ExternalRunnerStartFlags = []cli.Flag{
@@ -271,7 +272,7 @@ var (
 		cli.StringFlag{Name: "storepath", Usage: "local file system path for storing runner output", EnvVar: "WERCKER_RUNNER_STOREPATH"},
 		cli.StringFlag{Name: "logpath", Usage: "local file system path for storing log files"},
 		cli.IntFlag{Name: "runners", Value: 1, Usage: "number of runners to start, default is one"},
-		cli.IntFlag{Name: "poll-frequency", Value: 15, Usage: "number of seconds between runner polling for a job"},
+		cli.IntFlag{Name: "poll-frequency", Value: 5, Usage: "number of seconds between runner polling for a job"},
 		cli.StringFlag{Name: "token", Usage: "bearer token for external runner", EnvVar: "WERCKER_RUNNER_TOKEN"},
 		cli.BoolFlag{Name: "all", Usage: "specify that all jobs allowed to the user are eligible for selection by this runner"},
 		cli.BoolFlag{Name: "nowait", Usage: "run the external runner(s) in the background, default is false"},

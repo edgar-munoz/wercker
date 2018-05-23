@@ -58,6 +58,7 @@ type RunnerParams struct {
 	Journal        bool   // journal logging
 	AllOption      bool   // --all option
 	NoWait         bool   // --nowait options
+	PullRemote     bool   // --pull option
 	PollFreq       int    // Polling frequency
 	DockerEndpoint string // docker enndpoint
 	// following values are set during processing
@@ -96,6 +97,18 @@ func (cp *RunnerParams) RunDockerController(statusOnly bool) {
 		return
 	}
 	cp.client = cli
+
+	// Pickup proper image from local repository to be used for this run. WE are not checking
+	// for a newer version from the remote repository.
+	image, err := cp.getLocalImage()
+	if err != nil {
+		cp.Logger.Fatal(fmt.Sprintf("unable to access external runner Docker image: %s", err))
+		return
+	}
+	if image == nil {
+		cp.Logger.Fatal("No external runner image exists in your local Docker repository. Use wercker runner configure command.")
+		return
+	}
 
 	// Get the list of running containers and determine if there are already
 	// any running for the runner instance name.
@@ -167,11 +180,21 @@ func (cp *RunnerParams) RunDockerController(statusOnly bool) {
 	}
 
 	cp.startTheRunners()
-	message := fmt.Sprintf("Output is written to the %s directory", cp.StorePath)
-	cp.Logger.Info(message)
+	if cp.StorePath != "" {
+		message := fmt.Sprintf("Output is written to the %s directory", cp.StorePath)
+		cp.Logger.Info(message)
+	}
 
 	if !cp.NoWait {
+		// Foreground processing. The Wercker command continues to run while
+		// there are runner containers active.
 		cp.waitForExternalRunners()
+	} else {
+		// Background processing, all the containers are started but logs are not
+		// written because the Wecker command is ending and we cannot spawn
+		// loggers to output the logs from the containers. Log information must
+		// be obtained using the docker log command.
+		cp.Logger.Info("Use the Wercker runner stop command with the same name to terminate the started external runners.")
 	}
 }
 
@@ -187,6 +210,18 @@ func (cp *RunnerParams) startTheRunners() {
 			return
 		}
 		cp.BearerToken = token
+	}
+
+	// Add sanity checks to make sure storepath and logpath actually exist. Without this
+	// check a path with a type will result in a silent mount error when the container
+	// is started. It will appear that the external runner is hung.
+	if !checkPathExists(cp.StorePath) {
+		cp.Logger.Fatal(fmt.Sprintf("Local storage path %s does not exist", cp.StorePath))
+		return
+	}
+	if !checkPathExists(cp.LoggerPath) {
+		cp.Logger.Fatal(fmt.Sprintf("Log output path %s does not exist", cp.LoggerPath))
+		return
 	}
 
 	ct := 1
@@ -223,11 +258,9 @@ func (cp *RunnerParams) createTheRunnerCommand(name string) ([]string, error) {
 	if cp.StorePath != "" {
 		cmd = append(cmd, fmt.Sprintf("--runner-store-path=%s", cp.StorePath))
 	}
-	if cp.LoggerPath != "" {
-		cmd = append(cmd, fmt.Sprintf("--runner-logs-path=%s", cp.LoggerPath))
-	}
 	if cp.Debug == true {
 		cmd = append(cmd, "-d")
+		cmd = append(cmd, "--showlogs")
 	}
 	if cp.Journal == true {
 		cmd = append(cmd, "--journal")
@@ -262,14 +295,44 @@ func (cp *RunnerParams) startTheContainer(name string, cmd []string) error {
 		volumes = append(volumes, fmt.Sprintf("%s:%s:rw", cp.StorePath, cp.StorePath))
 	}
 
+	myenv := []string{}
+	myenv = append(myenv, fmt.Sprintf("WERCKER_RUNNER_TOKEN=%s", cp.BearerToken))
+
+	if cp.StorePath == "" {
+		awskey1 := os.Getenv("AWS_ACCESS_KEY_ID")
+		awskey2 := os.Getenv("AWS_SECRET_ACCESS_KEY")
+		if awskey1 == "" || awskey2 == "" {
+			cp.Logger.Fatal("Missing AWS S3 access credentials")
+		}
+		awsfullkey1 := fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", awskey1)
+		awsfullkey2 := fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", awskey2)
+		myenv = append(myenv, awsfullkey1)
+		myenv = append(myenv, awsfullkey2)
+	}
+
+	// Pickup proxies...
+	for _, env := range os.Environ() {
+		if strings.HasPrefix(env, "http_proxy") || strings.HasPrefix(env, "HTTP_PROXY") ||
+			strings.HasPrefix(env, "https_proxy") || strings.HasPrefix(env, "HTTPS_PROXY") ||
+			strings.HasPrefix(env, "no_proxy") || strings.HasPrefix(env, "NO_PROXY") {
+			// Don't set unless there is really significant data
+			tokens := strings.Split(env, "=")
+			if len(tokens[1]) > 4 {
+				myenv = append(myenv, env)
+			}
+		}
+	}
+
 	// This is a super Kludge until go-dockerclient is updated to support mounts.
 
 	args = append(args, "run")
 	args = append(args, "--detach")
 	args = append(args, "--name")
 	args = append(args, name)
-	args = append(args, "-e")
-	args = append(args, fmt.Sprintf("WERCKER_RUNNER_TOKEN=%s", cp.BearerToken))
+	for _, envvar := range myenv {
+		args = append(args, "-e")
+		args = append(args, envvar)
+	}
 	for _, label := range labels {
 		args = append(args, "--label")
 		args = append(args, label)
@@ -291,6 +354,7 @@ func (cp *RunnerParams) startTheContainer(name string, cmd []string) error {
 
 	message := fmt.Sprintf("External runner %s has started.", name)
 	cp.Logger.Print(message)
+	cp.Logger.Debug(fmt.Sprintf("Docker image: %s", cp.ImageName))
 
 	// Remember the container
 	// Wait a second because the docker api doesn't set the container id immediately
@@ -508,4 +572,19 @@ func (cp *RunnerParams) logFromContainer(rc *runnerContainer) {
 	if err != nil {
 		log.Print(err)
 	}
+}
+
+func checkPathExists(path string) bool {
+
+	if path == "" {
+		return true
+	}
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
 }
