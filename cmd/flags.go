@@ -55,7 +55,7 @@ var (
 	// These flags control where we store local files
 	LocalPathFlags = []cli.Flag{
 		cli.StringFlag{Name: "working-dir", Value: "./.wercker", Usage: "Path where we store working files.", EnvVar: "WERCKER_WORKING_DIR"},
-		cli.StringFlag{Name: "local-file-store", Usage: "Path where external runner stores pipeline files"},
+		cli.StringFlag{Name: "local-file-store", Usage: "Path where external runner stores pipeline files", Hidden: true},
 	}
 
 	// These flags control paths on the guest and probably shouldn't change
@@ -252,6 +252,16 @@ var (
 	WerckerDockerFlagSet = [][]cli.Flag{
 		AuthFlags,
 		WerckerFlags,
+	}
+
+	ExternalRunnerCommonFlagSet = [][]cli.Flag{
+		ExternalRunnerCommonFlags,
+	}
+	ExternalRunnerConfigureFlagSet = [][]cli.Flag{
+		ExternalRunnerConfigureFlags,
+	}
+	ExternalRunnerStartFlagSet = [][]cli.Flag{
+		ExternalRunnerStartFlags,
 	}
 
 	ExternalRunnerCommonFlags = []cli.Flag{

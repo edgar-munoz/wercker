@@ -393,7 +393,7 @@ var (
 						params.RunDockerController(false)
 					}
 				},
-				Flags: ExternalRunnerStartFlags,
+				Flags: FlagsFor(ExternalRunnerStartFlagSet, GlobalFlagSet),
 			},
 			{
 				Name:  "stop",
@@ -464,6 +464,7 @@ func setupExternalRunnerParams(c *cli.Context, params *external.RunnerParams) er
 	params.PollFreq = opts.Polling
 	params.DockerEndpoint = opts.DockerEndpoint
 	params.Logger = cliLogger
+	params.ProdType = opts.Production
 
 	return nil
 }
