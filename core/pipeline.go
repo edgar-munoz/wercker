@@ -68,6 +68,7 @@ type Pipeline interface {
 	DockerRepo() string
 	DockerTag() string
 	DockerMessage() string
+	Docker() bool
 }
 
 // PipelineResult keeps track of the results of a build or deploy
@@ -303,4 +304,8 @@ func (p *BasePipeline) SyncEnvironment(sessionCtx context.Context, sess *Session
 	}
 
 	return nil
+}
+
+func (p *BasePipeline) Docker() bool {
+	return p.config.Docker
 }

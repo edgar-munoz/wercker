@@ -332,10 +332,18 @@ func (b *DockerBox) getContainerName() string {
 }
 
 // Run creates the container and runs it.
-func (b *DockerBox) Run(ctx context.Context, env *util.Environment) (*docker.Container, error) {
+func (b *DockerBox) Run(ctx context.Context, env *util.Environment, rddURI string) (*docker.Container, error) {
 	dockerNetworkName, err := b.GetDockerNetworkName()
 	if err != nil {
 		return nil, err
+	}
+	if rddURI != "" {
+		env.Add("DOCKER_HOST", rddURI)
+		if strings.HasPrefix(rddURI, "unix://") {
+			dockerSocket := strings.TrimPrefix(rddURI, "unix://")
+			b.config.Volumes = fmt.Sprintf("%s,%s:%s", b.config.Volumes, dockerSocket, dockerSocket)
+			b.options.EnableVolumes = true
+		}
 	}
 	err = b.RunServices(ctx, env)
 	if err != nil {

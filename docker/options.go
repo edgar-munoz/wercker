@@ -39,6 +39,7 @@ type Options struct {
 	KernelMemory      int64
 	CleanupImage      bool
 	NetworkName       string
+	RddServiceURI     string
 }
 
 func guessAndUpdateDockerOptions(ctx context.Context, opts *Options, e *util.Environment) {
@@ -124,6 +125,7 @@ func NewOptions(ctx context.Context, c util.Settings, e *util.Environment) (*Opt
 	dockerKernelMemory, _ := c.Int("docker-kernel-memory")
 	dockerCleanupImage, _ := c.Bool("docker-cleanup-image")
 	dockerNetworkName, _ := c.String("docker-network")
+	rddServiceURI, _ := c.String("rdd-service-uri")
 
 	speculativeOptions := &Options{
 		Host:              dockerHost,
@@ -139,6 +141,7 @@ func NewOptions(ctx context.Context, c util.Settings, e *util.Environment) (*Opt
 		KernelMemory:      int64(dockerKernelMemory) * 1024 * 1024,
 		CleanupImage:      dockerCleanupImage,
 		NetworkName:       dockerNetworkName,
+		RddServiceURI:     rddServiceURI,
 	}
 
 	// We're going to try out a few settings and set DockerHost if
