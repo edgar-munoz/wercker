@@ -87,6 +87,7 @@ type Runner struct {
 	logger        *util.LogEntry
 	emitter       *core.NormalizedEmitter
 	formatter     *util.Formatter
+	rddImpl       *rdd.RDD
 }
 
 // NewRunner from global options
@@ -447,6 +448,9 @@ func (p *Runner) StartStep(ctx *RunnerShared, step core.Step, order int) *util.F
 func (p *Runner) StartBuild(options *core.PipelineOptions) *util.Finisher {
 	p.emitter.Emit(core.BuildStarted, &core.BuildStartedArgs{Options: options})
 	return util.NewFinisher(func(result interface{}) {
+		if p.rddImpl != nil {
+			p.rddImpl.Delete()
+		}
 		r, ok := result.(*core.BuildFinishedArgs)
 		if !ok {
 			return
@@ -526,7 +530,22 @@ func (p *Runner) SetupEnvironment(runnerCtx context.Context) (*RunnerShared, err
 	rddURI := ""
 	if pipeline.Docker() {
 		if p.dockerOptions.RddServiceURI != "" {
-			rddURI = rdd.GetRDD()
+			rddImpl, err := rdd.Init(runnerCtx, p.dockerOptions.RddServiceURI, p.dockerOptions.RddProvisionTimeout, p.options.RunID)
+			if err != nil {
+				sr.Message = err.Error()
+				return shared, err
+			}
+			rddURI, err = rddImpl.Get()
+			if err != nil {
+				sr.Message = err.Error()
+				return shared, err
+			}
+			if rddURI == "" {
+				err = fmt.Errorf("Unable to provision RDD for runID %s ", p.options.RunID)
+				sr.Message = err.Error()
+				return shared, err
+			}
+			p.rddImpl = rddImpl
 		} else {
 			rddURI = p.dockerOptions.Host
 		}

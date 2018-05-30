@@ -51,6 +51,7 @@ var (
 		cli.BoolFlag{Name: "docker-cleanup-image", Usage: "Remove image from the Docker when finished pushing them", Hidden: true},
 		cli.StringFlag{Name: "docker-network", Value: "", Usage: "Docker network name.", Hidden: true},
 		cli.StringFlag{Name: "rdd-service-uri", Value: "", Usage: "RDD API Server endpoint."},
+		cli.StringFlag{Name: "rdd-provision-timeout", Value: "5", Usage: "Timeout for RDD Provisioining from RDD Service."},
 	}
 
 	// These flags control where we store local files
