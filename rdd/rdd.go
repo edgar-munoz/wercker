@@ -24,8 +24,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	grpcmw "github.com/mwitkow/go-grpc-middleware"
 	"github.com/wercker/pkg/log"
-	rddpb "github.com/wercker/rdd/rddpb"
-	rdd_server "github.com/wercker/rdd/server"
+	rddpb "github.com/wercker/wercker/rdd/rddpb"
 	"google.golang.org/grpc"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -116,19 +115,13 @@ func (rdd *RDD) Get() (string, error) {
 				continue
 			}
 			currentRDDState := rddStatusResponse.GetState()
-			if currentRDDState == "" {
-				errMsg := fmt.Sprintf("Invalid response by GetStatus() from rdd service at %s for runID %s, State is empty. Retrying....", rdd.rddServiceEndpoint, rdd.runID)
-				log.Error(errMsg)
-				continue
-			}
-			if currentRDDState == rdd_server.Error {
+			if currentRDDState == rddpb.DaemonState_error {
 				errMsg := fmt.Sprintf("Error provisioning RDD from rdd service at %s for runID %s. Aborting.", rdd.rddServiceEndpoint, rdd.runID)
 				log.Error(errMsg)
 				return "", cli.NewExitError(errMsg, 1)
 			}
-			if currentRDDState == rdd_server.Provisioned {
-				//TODO - Change this to extract URI from StatusResponse
-				rddURI := ""
+			if currentRDDState == rddpb.DaemonState_provisioned {
+				rddURI := rddStatusResponse.URL
 				if rddURI == "" {
 					errMsg := fmt.Sprintf("Invalid RDD uri returned from rdd service at %s for runID %s. Aborting.", rdd.rddServiceEndpoint, rdd.runID)
 					log.Error(errMsg)
