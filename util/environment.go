@@ -16,7 +16,6 @@ package util
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"strings"
 )
@@ -85,19 +84,22 @@ func (e *Environment) Export() []string {
 			data := strings.Split(value, "$")
 			if strings.HasPrefix(value, "$") {
 				if _, ok := e.Map[data[0]]; ok {
+					data[0] = "$" + data[0]
+				} else {
 					data[0] = "\\$" + data[0]
 				}
 			}
 			for i := 1; i < len(data); i++ {
 				if _, ok := e.Map[data[i]]; ok {
-					data[i] = "\\$" + data[i]
-				} else {
 					data[i] = "$" + data[i]
+				} else {
+					data[i] = "\\$" + data[i]
 				}
 			}
 			value = strings.Join(data, "")
 		}
-		s = append(s, fmt.Sprintf(`export %s=%q`, key, value))
+
+		s = append(s, "export "+key+"="+value)
 	}
 	return s
 }
