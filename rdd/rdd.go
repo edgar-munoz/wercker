@@ -134,6 +134,8 @@ func (rdd *RDD) Get() (string, error) {
 				}
 				return rddURI, nil
 
+			} else {
+				log.Info(fmt.Sprintf("runID: %s, RDD Service URI: %s, RDD Provisioning status: %s", rdd.runID, rdd.rddServiceEndpoint, rddStatusResponse.GetState().String()))
 			}
 		}
 	}
@@ -168,6 +170,6 @@ func (rdd *RDD) verify() error {
 		return fmt.Errorf(`Unidentifiable docker version at RDD URI: %s
 			`, rddURI)
 	}
-	log.Info("Successfully connected to RDD at %s, Docker version: %s", rddURI, version.Version)
+	log.Info(fmt.Sprintf("Successfully connected to RDD at %s, Docker version: %s, Docker API version: %s", rddURI, version.Version, version.APIVersion))
 	return nil
 }

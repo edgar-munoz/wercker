@@ -1522,6 +1522,18 @@
 			"revisionTime": "2017-08-15T08:05:44Z"
 		},
 		{
+			"checksumSHA1": "zXn4DnI41yHyz/+qi46GwxfHtvs=",
+			"path": "github.com/grpc-ecosystem/grpc-gateway/runtime",
+			"revision": "a5b66c16bab6156b1cc525e76159bdff463123ba",
+			"revisionTime": "2018-05-17T19:03:18Z"
+		},
+		{
+			"checksumSHA1": "wo1YltMuyBtAZTKC5yvdVnYB1oA=",
+			"path": "github.com/grpc-ecosystem/grpc-gateway/utilities",
+			"revision": "a5b66c16bab6156b1cc525e76159bdff463123ba",
+			"revisionTime": "2018-05-17T19:03:18Z"
+		},
+		{
 			"checksumSHA1": "Uzyon2091lmwacNsl1hCytjhHtg=",
 			"path": "github.com/hashicorp/go-cleanhttp",
 			"revision": "ad28ea4487f05916463e2423a55166280e8254b5",
@@ -1628,6 +1640,12 @@
 			"path": "github.com/mreiferson/go-snappystream/snappy-go",
 			"revision": "028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504",
 			"revisionTime": "2015-04-16T23:44:20Z"
+		},
+		{
+			"checksumSHA1": "JZWMiL1gEDlMN5l1MBW5INOwhwc=",
+			"path": "github.com/mwitkow/go-grpc-middleware",
+			"revision": "e9c5d9645c437ab1b204cff969a2c0fb16cd4276",
+			"revisionTime": "2018-05-22T10:52:15Z"
 		},
 		{
 			"checksumSHA1": "I/ZY7LHsGvuDx4ApgLzWpW0sz8s=",
@@ -2104,6 +2122,12 @@
 			"revisionTime": "2017-07-17T18:23:50Z"
 		},
 		{
+			"checksumSHA1": "jtXdKs1ERw05BWF1scVY+9DmmII=",
+			"path": "github.com/wercker/pkg/log",
+			"revision": "8f5141c76788eea5b8c0856d019565167246ec62",
+			"revisionTime": "2018-04-28T04:15:48Z"
+		},
+		{
 			"checksumSHA1": "zmX+YoQS0YIcSDUg0y9BVLI0BMU=",
 			"path": "github.com/wercker/reporter-client",
 			"revision": "f52a96cebbe069791dbb890f534bdf0a51b727a9",
@@ -2452,6 +2476,12 @@
 			"revisionTime": "2017-10-31T19:43:29Z"
 		},
 		{
+			"checksumSHA1": "m1d4DsEkn6fuFF4b4O1ALS65yrk=",
+			"path": "google.golang.org/genproto/googleapis/api/annotations",
+			"revision": "694d95ba50e67b2e363f3483057db5d4910c18f9",
+			"revisionTime": "2018-05-23T21:25:16Z"
+		},
+		{
 			"checksumSHA1": "AvVpgwhxhJgjoSledwDtYrEKVE4=",
 			"path": "google.golang.org/genproto/googleapis/rpc/status",
 			"revision": "ee236bd376b077c7a89f260c026c4735b195e459",
@@ -2588,6 +2618,12 @@
 			"path": "gopkg.in/gemnasium/logrus-airbrake-hook.v2",
 			"revision": "e928b033a891c0175fb643d5aa0779e86325eb12",
 			"revisionTime": "2017-06-01T21:22:28Z"
+		},
+		{
+			"checksumSHA1": "G+sUW3pSzAPxWuYlNWhJodyQVTY=",
+			"path": "gopkg.in/urfave/cli.v1",
+			"revision": "cfb38830724cc34fedffe9a2a29fb54fa9169cd1",
+			"revisionTime": "2017-08-11T01:42:03Z"
 		},
 		{
 			"checksumSHA1": "orryOwzzDA/WtXbvrmVC2ikpEis=",
