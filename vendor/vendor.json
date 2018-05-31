@@ -1348,6 +1348,12 @@
 			"revisionTime": "2017-08-15T08:56:58Z"
 		},
 		{
+			"checksumSHA1": "IdGGufgi6cmmNWjt9bkFV99Hlh4=",
+			"path": "github.com/golang/protobuf/jsonpb",
+			"revision": "3a3da3a4e26776cc22a79ef46d5d58477532dede",
+			"revisionTime": "2018-05-22T22:42:51Z"
+		},
+		{
 			"checksumSHA1": "pMyj24fHq3hQd1dMVLXvBDPaMz0=",
 			"path": "github.com/golang/protobuf/proto",
 			"revision": "3a3da3a4e26776cc22a79ef46d5d58477532dede",
@@ -1524,6 +1530,12 @@
 		{
 			"checksumSHA1": "zXn4DnI41yHyz/+qi46GwxfHtvs=",
 			"path": "github.com/grpc-ecosystem/grpc-gateway/runtime",
+			"revision": "a5b66c16bab6156b1cc525e76159bdff463123ba",
+			"revisionTime": "2018-05-17T19:03:18Z"
+		},
+		{
+			"checksumSHA1": "HV5bBOOPCOhO6SUMFIGW/M6vi+I=",
+			"path": "github.com/grpc-ecosystem/grpc-gateway/runtime/internal",
 			"revision": "a5b66c16bab6156b1cc525e76159bdff463123ba",
 			"revisionTime": "2018-05-17T19:03:18Z"
 		},
@@ -2618,6 +2630,12 @@
 			"path": "gopkg.in/gemnasium/logrus-airbrake-hook.v2",
 			"revision": "e928b033a891c0175fb643d5aa0779e86325eb12",
 			"revisionTime": "2017-06-01T21:22:28Z"
+		},
+		{
+			"checksumSHA1": "+mZKlPX9t4fHOQvkQeCnWw5JjkQ=",
+			"path": "gopkg.in/mgo.v2/bson",
+			"revision": "3f83fa5005286a7fe593b055f0d7771a7dce4655",
+			"revisionTime": "2016-08-18T02:01:20Z"
 		},
 		{
 			"checksumSHA1": "G+sUW3pSzAPxWuYlNWhJodyQVTY=",
