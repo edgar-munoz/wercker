@@ -1396,6 +1396,12 @@
 			"revisionTime": "2018-02-02T18:43:18Z"
 		},
 		{
+			"checksumSHA1": "QwgMLtaLi/6xHaNiDFwHN844AkI=",
+			"path": "github.com/golang/protobuf/ptypes/struct",
+			"revision": "3a3da3a4e26776cc22a79ef46d5d58477532dede",
+			"revisionTime": "2018-05-22T22:42:51Z"
+		},
+		{
 			"checksumSHA1": "O2ItP5rmfrgxPufhjJXbFlXuyL8=",
 			"path": "github.com/golang/protobuf/ptypes/timestamp",
 			"revision": "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175",
@@ -2524,10 +2530,10 @@
 			"revisionTime": "2017-04-28T21:33:45Z"
 		},
 		{
-			"checksumSHA1": "3Lt5hNAG8qJAYSsNghR5uA1zQns=",
+			"checksumSHA1": "KYyKbsdKoWoANOXfTTFJhI31Rao=",
 			"path": "google.golang.org/grpc/grpclog",
-			"revision": "d2e1b51f33ff8c5e4a15560ff049d200e83726c5",
-			"revisionTime": "2017-04-28T21:33:45Z"
+			"revision": "590da37e2dfb4705d8ebd9574ce4cb75295d9674",
+			"revisionTime": "2018-05-29T21:11:52Z"
 		},
 		{
 			"checksumSHA1": "T3Q0p8kzvXFnRkMaK/G8mCv6mc0=",
@@ -2634,6 +2640,12 @@
 		{
 			"checksumSHA1": "+mZKlPX9t4fHOQvkQeCnWw5JjkQ=",
 			"path": "gopkg.in/mgo.v2/bson",
+			"revision": "3f83fa5005286a7fe593b055f0d7771a7dce4655",
+			"revisionTime": "2016-08-18T02:01:20Z"
+		},
+		{
+			"checksumSHA1": "trGhCcEZSOZTwlLfWCRAoXXihW8=",
+			"path": "gopkg.in/mgo.v2/internal/json",
 			"revision": "3f83fa5005286a7fe593b055f0d7771a7dce4655",
 			"revisionTime": "2016-08-18T02:01:20Z"
 		},
