@@ -16,6 +16,7 @@ package util
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -97,9 +98,10 @@ func (e *Environment) Export() []string {
 				}
 			}
 			value = strings.Join(data, "")
+			s = append(s, fmt.Sprintf(`export %s=%s`, key, value))
+		} else {
+			s = append(s, fmt.Sprintf(`export %s=%q`, key, value))
 		}
-
-		s = append(s, "export "+key+"="+value)
 	}
 	return s
 }
