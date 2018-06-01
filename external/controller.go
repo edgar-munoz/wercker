@@ -66,12 +66,14 @@ type RunnerParams struct {
 	Logger     *util.LogEntry
 	client     *docker.Client
 	containers []*runnerContainer
+	ProdType   bool // Set to true for production
 }
 
 // NewDockerController -
 func NewDockerController() *RunnerParams {
 	return &RunnerParams{
 		ImageName: "wercker-runner:latest",
+		ProdType:  false,
 	}
 }
 
@@ -299,6 +301,7 @@ func (cp *RunnerParams) startTheContainer(name string, cmd []string) error {
 	myenv = append(myenv, fmt.Sprintf("WERCKER_RUNNER_TOKEN=%s", cp.BearerToken))
 
 	if cp.StorePath == "" {
+		// This is deprecated and should be change to Oracle cloud eventually
 		awskey1 := os.Getenv("AWS_ACCESS_KEY_ID")
 		awskey2 := os.Getenv("AWS_SECRET_ACCESS_KEY")
 		if awskey1 == "" || awskey2 == "" {
@@ -308,6 +311,11 @@ func (cp *RunnerParams) startTheContainer(name string, cmd []string) error {
 		awsfullkey2 := fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", awskey2)
 		myenv = append(myenv, awsfullkey1)
 		myenv = append(myenv, awsfullkey2)
+	}
+
+	if cp.ProdType {
+		// Switch for production. Forces external runner to access app.wercker.com
+		myenv = append(myenv, "WERCKER_SYSTYPE=PROD")
 	}
 
 	// Pickup proxies...
@@ -417,7 +425,7 @@ func (cp *RunnerParams) shutdownRunners(runners []*docker.Container) {
 			ID: dockerContainer.ID,
 		})
 		if err != nil {
-			message := fmt.Sprintf("failed to kill runner container: %s, err=%s", containerName, err)
+			message := fmt.Sprintf("failed to stop runner container: %s, err=%s", containerName, err)
 			cp.Logger.Print(message)
 			continue
 		}
@@ -459,6 +467,25 @@ func (cp *RunnerParams) waitForExternalRunners() {
 	for _, p := range cp.containers {
 		go cp.logFromContainer(p)
 	}
+
+	// Setup interrupt handler
+	runnerCleanupHandler := &util.SignalHandler{
+		ID: "runner-cleanup",
+		F: func() bool {
+			cp.Logger.Warnln("Interrupt detected, cleaning up external runner containers and shutting down")
+
+			// Kill each container and gracefully terminate
+			for _, p := range cp.containers {
+				cp.client.KillContainer(docker.KillContainerOptions{
+					ID: p.containerID,
+				})
+				continue
+			}
+			return true
+		},
+	}
+	util.GlobalSigint().Add(runnerCleanupHandler)
+	util.GlobalSigterm().Add(runnerCleanupHandler)
 
 	// Wait until all containers have exited.
 	for len(cp.containers) > 0 {
