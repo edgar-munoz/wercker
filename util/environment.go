@@ -83,13 +83,6 @@ func (e *Environment) Export() []string {
 		value := e.Map[key]
 		if strings.Contains(value, "$") {
 			data := strings.Split(value, "$")
-			if strings.HasPrefix(value, "$") {
-				if _, ok := e.Map[data[0]]; ok {
-					data[0] = "$" + data[0]
-				} else {
-					data[0] = "\\$" + data[0]
-				}
-			}
 			for i := 1; i < len(data); i++ {
 				if _, ok := e.Map[data[i]]; ok {
 					data[i] = "$" + data[i]
