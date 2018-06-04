@@ -29,7 +29,15 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
-//RDD - encapsulate all RDD access
+const (
+	errorMsgFailOnProvision             = "Error invoking Provision() from rdd service at %s for runID %s, Error: %s"
+	errorMsgInvalidProvisioningResponse = "Invalid response by Provision() from rdd service at %s for runID %s, ResponseID is empty."
+	errorMsgTimeOut                     = "RDD provisioning timed out from rdd service at %s for runID %s after %d seconds."
+	errorMsgGetStatusError              = "Error provisioning RDD from rdd service at %s for runID %s. Aborting."
+	errorMsgInvalidRDDUrl               = "Invalid RDD uri returned from rdd service at %s for runID %s. Aborting."
+)
+
+//RDD - struct containing all parameters and client for RDD access
 type RDD struct {
 	rddServiceEndpoint  string
 	rddProvisionTimeout int64
@@ -44,7 +52,7 @@ type rddDetails struct {
 	rddProvisionRequestID string
 }
 
-//Init - initialize a RDD construct
+//Init - initialize a RDD construct, check connection with RDD API service and create a client
 func Init(ctx context.Context, rddServiceEndpoint string, rddProvisionTimeout int64, runID string) (*RDD, error) {
 	log.Debug("Connecting to rdd service")
 
@@ -72,37 +80,38 @@ func Init(ctx context.Context, rddServiceEndpoint string, rddProvisionTimeout in
 	return rdd, nil
 }
 
-//Get - Invokes RDD Service to get remote docker daemon URL
+//Get - Invokes RDD Service to get remote docker daemon URL by first executing a Provision()
+//request followed by polling GetStatus()
 func (rdd *RDD) Get() (string, error) {
 	rddProvRequest := &rddpb.RDDProvisionRequest{RunID: rdd.runID}
 	rddProvResponse, err := rdd.rddClient.Provision(rdd.ctx, rddProvRequest)
 
 	if err != nil {
-		errMsg := fmt.Sprintf("Error invoking Provision() from rdd service at %s for runID %s, Error: %s", rdd.rddServiceEndpoint, rdd.runID, err.Error())
+		errMsg := fmt.Sprintf(errorMsgFailOnProvision, rdd.rddServiceEndpoint, rdd.runID, err.Error())
 		log.Error(errMsg)
 		return "", cli.NewExitError(errMsg, 1)
 	}
 
 	rddResponseID := rddProvResponse.GetId()
 	if rddResponseID == "" {
-		errMsg := fmt.Sprintf("Invalid response by Provision() from rdd service at %s for runID %s, ResponseID is empty.", rdd.rddServiceEndpoint, rdd.runID)
+		errMsg := fmt.Sprintf(errorMsgInvalidProvisioningResponse, rdd.rddServiceEndpoint, rdd.runID)
 		log.Error(errMsg)
 		return "", cli.NewExitError(errMsg, 1)
 	}
 
-	timeoutThresholdInMinutes, err := time.ParseDuration(fmt.Sprintf("%dm", rdd.rddProvisionTimeout))
+	timeoutThresholdInSeconds, err := time.ParseDuration(fmt.Sprintf("%ds", rdd.rddProvisionTimeout))
 	if err != nil {
-		log.Error("Error parsing timeout value from input rdd-provision-timeout of %d, Error: %s. Default value of 5m will be used.", rdd.rddProvisionTimeout, err.Error())
-		timeoutThresholdInMinutes = 5 * time.Minute
+		log.Error("Error parsing timeout value from input rdd-provision-timeout of %d, Error: %s. Default value of 300s will be used.", rdd.rddProvisionTimeout, err.Error())
+		timeoutThresholdInSeconds = 300 * time.Second
 	}
-	timeout := time.After(timeoutThresholdInMinutes)
+	timeout := time.After(timeoutThresholdInSeconds)
 	tick := time.Tick(5 * time.Second)
 
 	for {
 		select {
 
 		case <-timeout:
-			errMsg := fmt.Sprintf("RDD provisioning timed out from rdd service at %s for runID %s after %d minutes.", rdd.rddServiceEndpoint, rdd.runID, 5)
+			errMsg := fmt.Sprintf(errorMsgTimeOut, rdd.rddServiceEndpoint, rdd.runID, int(timeoutThresholdInSeconds.Seconds()))
 			log.Error(errMsg)
 			return "", cli.NewExitError(errMsg, 1)
 
@@ -116,14 +125,14 @@ func (rdd *RDD) Get() (string, error) {
 			}
 			currentRDDState := rddStatusResponse.GetState()
 			if currentRDDState == rddpb.DaemonState_error {
-				errMsg := fmt.Sprintf("Error provisioning RDD from rdd service at %s for runID %s. Aborting.", rdd.rddServiceEndpoint, rdd.runID)
+				errMsg := fmt.Sprintf(errorMsgGetStatusError, rdd.rddServiceEndpoint, rdd.runID)
 				log.Error(errMsg)
 				return "", cli.NewExitError(errMsg, 1)
 			}
 			if currentRDDState == rddpb.DaemonState_provisioned {
 				rddURI := rddStatusResponse.URL
 				if rddURI == "" {
-					errMsg := fmt.Sprintf("Invalid RDD uri returned from rdd service at %s for runID %s. Aborting.", rdd.rddServiceEndpoint, rdd.runID)
+					errMsg := fmt.Sprintf(errorMsgInvalidRDDUrl, rdd.rddServiceEndpoint, rdd.runID)
 					log.Error(errMsg)
 					return "", cli.NewExitError(errMsg, 1)
 				}
@@ -134,9 +143,9 @@ func (rdd *RDD) Get() (string, error) {
 				}
 				return rddURI, nil
 
-			} else {
-				log.Info(fmt.Sprintf("runID: %s, RDD Service URI: %s, RDD Provisioning status: %s", rdd.runID, rdd.rddServiceEndpoint, rddStatusResponse.GetState().String()))
 			}
+			log.Info(fmt.Sprintf("runID: %s, RDD Service URI: %s, RDD Provisioning status: %s", rdd.runID, rdd.rddServiceEndpoint, currentRDDState.String()))
+
 		}
 	}
 }
@@ -151,6 +160,7 @@ func (rdd *RDD) Delete() {
 	}
 }
 
+//verify - verify the RDD url by executing 	docker --version command
 func (rdd *RDD) verify() error {
 	rddURI := rdd.rddDetails.rddURI
 	dockerClient, err := client.NewClientWithOpts(client.WithHost(rddURI))

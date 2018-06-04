@@ -141,3 +141,10 @@ OPTIONS
   Wercker host to use for wercker reporter.
 --wercker-token::
   Wercker token to use for wercker reporter.
+--rdd-service-uri::
+  RDD API Service endpoint
+--rdd-provision-timeout::
+  Timeout (in seconds) for RDD Provisioining from RDD API Service
+  Default;;
+    300
+  
