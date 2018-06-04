@@ -958,6 +958,7 @@ type WerckerRunnerOptions struct {
 	AllOption      bool
 	NoWait         bool
 	PullRemote     bool
+	Production     bool
 }
 
 // NewExternalRunnerOptions -
@@ -980,6 +981,12 @@ func NewExternalRunnerOptions(c util.Settings, e *util.Environment) (*WerckerRun
 	dhost, _ := c.String("docker-host")
 	nwait, _ := c.Bool("nowait")
 	pulls, _ := c.Bool("pull")
+
+	prod := false
+	erBaseURL, _ := c.String("base-url")
+	if erBaseURL != "" && erBaseURL == DEFAULT_BASE_URL {
+		prod = true
+	}
 
 	if dhost == "" {
 		dhost = "unix:///var/run/docker.sock"
@@ -1007,5 +1014,6 @@ func NewExternalRunnerOptions(c util.Settings, e *util.Environment) (*WerckerRun
 		NoWait:         nwait,
 		DockerEndpoint: dhost,
 		PullRemote:     pulls,
+		Production:     prod,
 	}, nil
 }
