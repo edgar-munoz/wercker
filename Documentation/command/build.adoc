@@ -142,7 +142,7 @@ OPTIONS
 --wercker-token::
   Wercker token to use for wercker reporter.
 --rdd-service-uri::
-  RDD API Service endpoint
+  RDD API Service endpoint. RDD API service is used to configure Remote Docker Daemon for builds.
 --rdd-provision-timeout::
   Timeout (in seconds) for RDD Provisioining from RDD API Service
   Default;;

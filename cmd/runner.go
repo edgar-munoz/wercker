@@ -448,8 +448,9 @@ func (p *Runner) StartStep(ctx *RunnerShared, step core.Step, order int) *util.F
 func (p *Runner) StartBuild(options *core.PipelineOptions) *util.Finisher {
 	p.emitter.Emit(core.BuildStarted, &core.BuildStartedArgs{Options: options})
 	return util.NewFinisher(func(result interface{}) {
+		//Deprovision any Remote Docker Daemon configured for this build
 		if p.rddImpl != nil {
-			p.rddImpl.Delete()
+			p.rddImpl.Deprovision()
 		}
 		r, ok := result.(*core.BuildFinishedArgs)
 		if !ok {
@@ -527,6 +528,8 @@ func (p *Runner) SetupEnvironment(runnerCtx context.Context) (*RunnerShared, err
 		sr.Message = err.Error()
 		return shared, err
 	}
+	//If yaml file contains "docker:true" - configure a Remote Docker Daemon for the build
+	//by accessing a Remote Docker Daemon API Service
 	rddURI := ""
 	if pipeline.Docker() {
 		if p.dockerOptions.RddServiceURI != "" {
@@ -535,7 +538,7 @@ func (p *Runner) SetupEnvironment(runnerCtx context.Context) (*RunnerShared, err
 				sr.Message = err.Error()
 				return shared, err
 			}
-			rddURI, err = rddImpl.Get()
+			rddURI, err = rddImpl.Provision()
 			if err != nil {
 				sr.Message = err.Error()
 				return shared, err

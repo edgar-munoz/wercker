@@ -1,4 +1,4 @@
-//   Copyright © 2018, Oracle and/or its affiliates.  All rights reserved.
+//   Copyright (c) 2018, Oracle and/or its affiliates.  All rights reserved.
 //
 //   Licensed under the Apache License, Version 2.0 (the "License");
 //   you may not use this file except in compliance with the License.
@@ -30,11 +30,11 @@ import (
 )
 
 const (
-	errorMsgFailOnProvision             = "Error invoking Provision() from rdd service at %s for runID %s, Error: %s"
-	errorMsgInvalidProvisioningResponse = "Invalid response by Provision() from rdd service at %s for runID %s, ResponseID is empty."
-	errorMsgTimeOut                     = "RDD provisioning timed out from rdd service at %s for runID %s after %d seconds."
-	errorMsgGetStatusError              = "Error provisioning RDD from rdd service at %s for runID %s. Aborting."
-	errorMsgInvalidRDDUrl               = "Invalid RDD uri returned from rdd service at %s for runID %s. Aborting."
+	errorMsgFailOnProvision             = "Error invoking Provision() from Remote Docker Daemon API service at %s for runID %s, Error: %s"
+	errorMsgInvalidProvisioningResponse = "Invalid response by Provision() from Remote Docker Daemon API service at %s for runID %s, ResponseID is empty."
+	errorMsgTimeOut                     = "Remote Docker Daemon provisioning timed out from Remote Docker Daemon API  service at %s for runID %s after %d seconds."
+	errorMsgGetStatusError              = "Error provisioning Remote Docker Daemon from Remote Docker Daemon API service at %s for runID %s."
+	errorMsgInvalidRDDUrl               = "Invalid Remote Docker Daemon uri returned from Remote Docker Daemon API service service at %s for runID %s."
 )
 
 //RDD - struct containing all parameters and client for RDD access
@@ -80,12 +80,11 @@ func Init(ctx context.Context, rddServiceEndpoint string, rddProvisionTimeout in
 	return rdd, nil
 }
 
-//Get - Invokes RDD Service to get remote docker daemon URL by first executing a Provision()
+//Provision - Invokes RDD Service to Provision remote docker daemon URL by first executing a Provision()
 //request followed by polling GetStatus()
-func (rdd *RDD) Get() (string, error) {
+func (rdd *RDD) Provision() (string, error) {
 	rddProvRequest := &rddpb.RDDProvisionRequest{RunID: rdd.runID}
 	rddProvResponse, err := rdd.rddClient.Provision(rdd.ctx, rddProvRequest)
-
 	if err != nil {
 		errMsg := fmt.Sprintf(errorMsgFailOnProvision, rdd.rddServiceEndpoint, rdd.runID, err.Error())
 		log.Error(errMsg)
@@ -101,7 +100,7 @@ func (rdd *RDD) Get() (string, error) {
 
 	timeoutThresholdInSeconds, err := time.ParseDuration(fmt.Sprintf("%ds", rdd.rddProvisionTimeout))
 	if err != nil {
-		log.Error("Error parsing timeout value from input rdd-provision-timeout of %d, Error: %s. Default value of 300s will be used.", rdd.rddProvisionTimeout, err.Error())
+		log.Warningf("Error parsing timeout value from input rdd-provision-timeout of %d, Error: %s. Default value of 300s will be used.", rdd.rddProvisionTimeout, err.Error())
 		timeoutThresholdInSeconds = 300 * time.Second
 	}
 	timeout := time.After(timeoutThresholdInSeconds)
@@ -150,13 +149,13 @@ func (rdd *RDD) Get() (string, error) {
 	}
 }
 
-//Delete - removes a RDD
-func (rdd *RDD) Delete() {
+//Deprovision - Deprovisions a RDD previously provisioned for a build
+func (rdd *RDD) Deprovision() {
 	rddDeProvRequest := &rddpb.RDDDeprovisionRequest{Id: rdd.rddDetails.rddProvisionRequestID}
 	_, err := rdd.rddClient.Deprovision(rdd.ctx, rddDeProvRequest)
 	if err != nil {
 		errMsg := fmt.Sprintf("Error invoking Deprovision() from rdd service at %s for runID %s, Error: %s. Ignoring", rdd.rddServiceEndpoint, rdd.runID, err.Error())
-		log.Error(errMsg)
+		log.Warning(errMsg)
 	}
 }
 
@@ -165,8 +164,7 @@ func (rdd *RDD) verify() error {
 	rddURI := rdd.rddDetails.rddURI
 	dockerClient, err := client.NewClientWithOpts(client.WithHost(rddURI))
 	if err != nil {
-		return fmt.Errorf(`Unable to create a docker client with RDD URI: %s, Error: %s
-		`, rddURI, err.Error())
+		return fmt.Errorf(`Unable to create a docker client with RDD URI: %s, Error: %s`, rddURI, err.Error())
 	}
 	version, err := dockerClient.ServerVersion(rdd.ctx)
 	if err != nil {

@@ -68,6 +68,7 @@ type Pipeline interface {
 	DockerRepo() string
 	DockerTag() string
 	DockerMessage() string
+	//Indicates whether the build requires a Remote Docker Daemon
 	Docker() bool
 }
 

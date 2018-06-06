@@ -104,33 +104,33 @@ func TestRDDSuite(t *testing.T) {
 	suite.Run(t, suiteTester)
 }
 
-//TestGet_FailOnRDDProvision - Tests the scenario when Provision() API invoked from Get()
+//TestProvision_FailOnRDDProvision - Tests the scenario when Provision() API invoked from Get()
 //returns an error
-func (s *RDDSuite) TestGet_FailOnRDDProvision() {
+func (s *RDDSuite) TestProvision_FailOnRDDProvision() {
 	rddProvFailRequest := &rddpb.RDDProvisionRequest{RunID: runIDFailOnProvision}
 	errMsg := "some error"
 	defaultRDDClient.StubRddProvision(rddProvFailRequest, nil, errors.New(errMsg))
 	rdd.runID = runIDFailOnProvision
-	rddURI, err := rdd.Get()
+	rddURI, err := rdd.Provision()
 	s.Empty(rddURI, "rddUri should be empty, got %s", rddURI)
 	s.Equal(err.Error(), fmt.Sprintf(errorMsgFailOnProvision, defaultRDDServiceEndPoint, runIDFailOnProvision, errMsg))
 }
 
-//TestGet_InvalidResponseOnRDDProvision - Tests the scenario when Provision() API invoked from Get()
+//TestProvision_InvalidResponseOnRDDProvision - Tests the scenario when Provision() API invoked from Get()
 //returns an RDDProvisionResponse with empty Id
-func (s *RDDSuite) TestGet_InvalidResponseOnRDDProvision() {
+func (s *RDDSuite) TestProvision_InvalidResponseOnRDDProvision() {
 	rddProvRequest := &rddpb.RDDProvisionRequest{RunID: runIDInvalidProvisionResponse}
 	rddProvInvalidResponse := &rddpb.RDDProvisionResponse{Id: provisionIDInvalidProvisionResponse}
 	defaultRDDClient.StubRddProvision(rddProvRequest, rddProvInvalidResponse, nil)
 	rdd.runID = runIDInvalidProvisionResponse
-	rddURI, err := rdd.Get()
+	rddURI, err := rdd.Provision()
 	s.Empty(rddURI, "rddUri should be empty, got %s", rddURI)
 	s.Equal(err.Error(), fmt.Sprintf(errorMsgInvalidProvisioningResponse, defaultRDDServiceEndPoint, runIDInvalidProvisionResponse))
 }
 
-//TestGet_TimeoutOnRDDProvision - Tests the scenario when GetStatus() API invoked from Get()
+//TestProvision_TimeoutOnRDDProvision - Tests the scenario when GetStatus() API invoked from Get()
 //times out
-func (s *RDDSuite) TestGet_TimeoutOnRDDProvision() {
+func (s *RDDSuite) TestProvision_TimeoutOnRDDProvision() {
 	rddProvRequest := &rddpb.RDDProvisionRequest{RunID: runIDTimeOut}
 	rddProvResponse := &rddpb.RDDProvisionResponse{Id: provisionIDTimeOut}
 	defaultRDDClient.StubRddProvision(rddProvRequest, rddProvResponse, nil)
@@ -139,14 +139,14 @@ func (s *RDDSuite) TestGet_TimeoutOnRDDProvision() {
 	defaultRDDClient.StubRddStatus(rddStatusRequest, rddStatusResponse, nil)
 	rdd.runID = runIDTimeOut
 	rdd.rddProvisionTimeout = 5
-	rddURI, err := rdd.Get()
+	rddURI, err := rdd.Provision()
 	s.Empty(rddURI, "rddUri should be empty, got %s", rddURI)
 	s.Equal(err.Error(), fmt.Sprintf(errorMsgTimeOut, defaultRDDServiceEndPoint, runIDTimeOut, 5))
 }
 
-//TestGet_ErrorOnGetStatus - Tests the scenario when GetStatus() API invoked from Get()
+//TestProvision_ErrorOnGetStatus - Tests the scenario when GetStatus() API invoked from Get()
 //returns a response with State DaemonState_error
-func (s *RDDSuite) TestGet_ErrorOnGetStatus() {
+func (s *RDDSuite) TestProvision_ErrorOnGetStatus() {
 	rddProvRequest := &rddpb.RDDProvisionRequest{RunID: runIDGetStatusError}
 	rddProvResponse := &rddpb.RDDProvisionResponse{Id: provisionIDGetStatusError}
 	defaultRDDClient.StubRddProvision(rddProvRequest, rddProvResponse, nil)
@@ -154,14 +154,14 @@ func (s *RDDSuite) TestGet_ErrorOnGetStatus() {
 	rddStatusResponse := &rddpb.RDDStatusResponse{RunID: runIDGetStatusError, State: rddpb.DaemonState_error}
 	defaultRDDClient.StubRddStatus(rddStatusRequest, rddStatusResponse, nil)
 	rdd.runID = runIDGetStatusError
-	rddURI, err := rdd.Get()
+	rddURI, err := rdd.Provision()
 	s.Empty(rddURI, "rddUri should be empty, got %s", rddURI)
 	s.Equal(err.Error(), fmt.Sprintf(errorMsgGetStatusError, defaultRDDServiceEndPoint, runIDGetStatusError))
 }
 
-//TestGet_InvalidRDDUrlOnGetStatus - Tests the scenario when GetStatus() API invoked from Get()
+//TestProvision_InvalidRDDUrlOnGetStatus - Tests the scenario when GetStatus() API invoked from Get()
 //returns a response with empty RDD URL
-func (s *RDDSuite) TestGet_InvalidRDDUrlOnGetStatus() {
+func (s *RDDSuite) TestProvision_InvalidRDDUrlOnGetStatus() {
 	rddProvRequest := &rddpb.RDDProvisionRequest{RunID: runIDGetStatusInvalidRDDUrl}
 	rddProvResponse := &rddpb.RDDProvisionResponse{Id: provisionIDGetStatusInvalidRDDUrl}
 	defaultRDDClient.StubRddProvision(rddProvRequest, rddProvResponse, nil)
@@ -169,7 +169,7 @@ func (s *RDDSuite) TestGet_InvalidRDDUrlOnGetStatus() {
 	rddStatusResponse := &rddpb.RDDStatusResponse{RunID: runIDGetStatusInvalidRDDUrl, State: rddpb.DaemonState_provisioned}
 	defaultRDDClient.StubRddStatus(rddStatusRequest, rddStatusResponse, nil)
 	rdd.runID = runIDGetStatusInvalidRDDUrl
-	rddURI, err := rdd.Get()
+	rddURI, err := rdd.Provision()
 	s.Empty(rddURI, "rddUri should be empty, got %s", rddURI)
 	s.Equal(err.Error(), fmt.Sprintf(errorMsgInvalidRDDUrl, defaultRDDServiceEndPoint, runIDGetStatusInvalidRDDUrl))
 }

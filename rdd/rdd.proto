@@ -1,3 +1,4 @@
+// This client proto file should always be in sync with service proto file located at https://github.com/wercker/rdd/blob/master/rdd.proto
 syntax = "proto3";
 
 package rdd;
