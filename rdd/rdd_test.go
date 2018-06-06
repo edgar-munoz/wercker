@@ -6,8 +6,6 @@ import (
 	"reflect"
 	"testing"
 
-	ctx "context"
-
 	context "golang.org/x/net/context"
 
 	"github.com/stretchr/testify/suite"
@@ -80,13 +78,12 @@ func (c *FakeRDDClient) StubRddStatus(req *rddpb.RDDStatusRequest, result *rddpb
 var _ rddpb.RddClient = &FakeRDDClient{}
 var defaultRDDServiceEndPoint = "localhost:4621"
 var defaultRDDProvisionTimeOut = int64(100)
-var defaultContext = ctx.Background()
+var defaultContext = context.Background()
 var defaultRDDClient = &FakeRDDClient{rddProvStubs: []*rddProvStub{}}
 var rdd = &RDD{
 	rddServiceEndpoint:  defaultRDDServiceEndPoint,
 	rddProvisionTimeout: defaultRDDProvisionTimeOut,
 	rddClient:           defaultRDDClient,
-	ctx:                 defaultContext,
 }
 
 var runIDFailOnProvision = "failme"
@@ -111,7 +108,7 @@ func (s *RDDSuite) TestProvision_FailOnRDDProvision() {
 	errMsg := "some error"
 	defaultRDDClient.StubRddProvision(rddProvFailRequest, nil, errors.New(errMsg))
 	rdd.runID = runIDFailOnProvision
-	rddURI, err := rdd.Provision()
+	rddURI, err := rdd.Provision(defaultContext)
 	s.Empty(rddURI, "rddUri should be empty, got %s", rddURI)
 	s.Equal(err.Error(), fmt.Sprintf(errorMsgFailOnProvision, defaultRDDServiceEndPoint, runIDFailOnProvision, errMsg))
 }
@@ -123,7 +120,7 @@ func (s *RDDSuite) TestProvision_InvalidResponseOnRDDProvision() {
 	rddProvInvalidResponse := &rddpb.RDDProvisionResponse{Id: provisionIDInvalidProvisionResponse}
 	defaultRDDClient.StubRddProvision(rddProvRequest, rddProvInvalidResponse, nil)
 	rdd.runID = runIDInvalidProvisionResponse
-	rddURI, err := rdd.Provision()
+	rddURI, err := rdd.Provision(defaultContext)
 	s.Empty(rddURI, "rddUri should be empty, got %s", rddURI)
 	s.Equal(err.Error(), fmt.Sprintf(errorMsgInvalidProvisioningResponse, defaultRDDServiceEndPoint, runIDInvalidProvisionResponse))
 }
@@ -139,7 +136,7 @@ func (s *RDDSuite) TestProvision_TimeoutOnRDDProvision() {
 	defaultRDDClient.StubRddStatus(rddStatusRequest, rddStatusResponse, nil)
 	rdd.runID = runIDTimeOut
 	rdd.rddProvisionTimeout = 5
-	rddURI, err := rdd.Provision()
+	rddURI, err := rdd.Provision(defaultContext)
 	s.Empty(rddURI, "rddUri should be empty, got %s", rddURI)
 	s.Equal(err.Error(), fmt.Sprintf(errorMsgTimeOut, defaultRDDServiceEndPoint, runIDTimeOut, 5))
 }
@@ -154,7 +151,7 @@ func (s *RDDSuite) TestProvision_ErrorOnGetStatus() {
 	rddStatusResponse := &rddpb.RDDStatusResponse{RunID: runIDGetStatusError, State: rddpb.DaemonState_error}
 	defaultRDDClient.StubRddStatus(rddStatusRequest, rddStatusResponse, nil)
 	rdd.runID = runIDGetStatusError
-	rddURI, err := rdd.Provision()
+	rddURI, err := rdd.Provision(defaultContext)
 	s.Empty(rddURI, "rddUri should be empty, got %s", rddURI)
 	s.Equal(err.Error(), fmt.Sprintf(errorMsgGetStatusError, defaultRDDServiceEndPoint, runIDGetStatusError))
 }
@@ -169,7 +166,7 @@ func (s *RDDSuite) TestProvision_InvalidRDDUrlOnGetStatus() {
 	rddStatusResponse := &rddpb.RDDStatusResponse{RunID: runIDGetStatusInvalidRDDUrl, State: rddpb.DaemonState_provisioned}
 	defaultRDDClient.StubRddStatus(rddStatusRequest, rddStatusResponse, nil)
 	rdd.runID = runIDGetStatusInvalidRDDUrl
-	rddURI, err := rdd.Provision()
+	rddURI, err := rdd.Provision(defaultContext)
 	s.Empty(rddURI, "rddUri should be empty, got %s", rddURI)
 	s.Equal(err.Error(), fmt.Sprintf(errorMsgInvalidRDDUrl, defaultRDDServiceEndPoint, runIDGetStatusInvalidRDDUrl))
 }

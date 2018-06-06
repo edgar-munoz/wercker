@@ -68,7 +68,7 @@ type Pipeline interface {
 	DockerRepo() string
 	DockerTag() string
 	DockerMessage() string
-	//Indicates whether the build requires a Remote Docker Daemon
+	//Docker() - returns true if the build requires a Remote Docker Daemon
 	Docker() bool
 }
 
@@ -307,6 +307,7 @@ func (p *BasePipeline) SyncEnvironment(sessionCtx context.Context, sess *Session
 	return nil
 }
 
+//Docker - returns true if the build requires a Remote Docker Daemon
 func (p *BasePipeline) Docker() bool {
 	return p.config.Docker
 }

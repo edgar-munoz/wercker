@@ -87,7 +87,7 @@ type Runner struct {
 	logger        *util.LogEntry
 	emitter       *core.NormalizedEmitter
 	formatter     *util.Formatter
-	rddImpl       *rdd.RDD
+	rdd           *rdd.RDD
 }
 
 // NewRunner from global options
@@ -449,8 +449,8 @@ func (p *Runner) StartBuild(options *core.PipelineOptions) *util.Finisher {
 	p.emitter.Emit(core.BuildStarted, &core.BuildStartedArgs{Options: options})
 	return util.NewFinisher(func(result interface{}) {
 		//Deprovision any Remote Docker Daemon configured for this build
-		if p.rddImpl != nil {
-			p.rddImpl.Deprovision()
+		if p.rdd != nil {
+			p.rdd.Deprovision()
 		}
 		r, ok := result.(*core.BuildFinishedArgs)
 		if !ok {
@@ -533,12 +533,12 @@ func (p *Runner) SetupEnvironment(runnerCtx context.Context) (*RunnerShared, err
 	rddURI := ""
 	if pipeline.Docker() {
 		if p.dockerOptions.RddServiceURI != "" {
-			rddImpl, err := rdd.Init(runnerCtx, p.dockerOptions.RddServiceURI, p.dockerOptions.RddProvisionTimeout, p.options.RunID)
+			rddImpl, err := rdd.New(p.dockerOptions.RddServiceURI, p.dockerOptions.RddProvisionTimeout, p.options.RunID)
 			if err != nil {
 				sr.Message = err.Error()
 				return shared, err
 			}
-			rddURI, err = rddImpl.Provision()
+			rddURI, err = rddImpl.Provision(runnerCtx)
 			if err != nil {
 				sr.Message = err.Error()
 				return shared, err
@@ -548,7 +548,7 @@ func (p *Runner) SetupEnvironment(runnerCtx context.Context) (*RunnerShared, err
 				sr.Message = err.Error()
 				return shared, err
 			}
-			p.rddImpl = rddImpl
+			p.rdd = rddImpl
 		} else {
 			rddURI = p.dockerOptions.Host
 		}
