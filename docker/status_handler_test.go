@@ -164,7 +164,7 @@ func (s *StatusHandlerSuite) TestPushParallelUploads() {
 			&jsonmessage.JSONMessage{
 				Status: "The push refers to a repository [127.0.0.1:3000/bvdberg/pass] (len: 1)",
 			},
-			"Pushing to registry\n",
+			"Pushing image to registry\n",
 		},
 		{
 			&jsonmessage.JSONMessage{

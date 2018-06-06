@@ -139,7 +139,7 @@ func (s *JSONMessageProcessor) getOutput() string {
 // formatCompleteOutput will format the message m as an completed message.
 func formatCompleteOutput(m *jsonmessage.JSONMessage) string {
 	if strings.HasPrefix(m.Status, "The push refers to a repository") {
-		return "Pushing to registry"
+		return "Pushing image to registry"
 	}
 
 	if strings.HasPrefix(m.Status, "Pushing repository") &&
