@@ -1,4 +1,3 @@
-// This client proto file should always be in sync with service proto file located at https://github.com/wercker/rdd/blob/master/rdd.proto
 syntax = "proto3";
 
 package rdd;
@@ -37,6 +36,8 @@ enum DaemonState {
   deprovisioning = 3;
   // error means that the specified remote docker daemon could not be provisioned
   error = 4;
+  // deprovisioned means the specified remote docker daemon is deprovisioned
+  deprovisioned = 5;
 }
 
 message RDDStatusResponse{
