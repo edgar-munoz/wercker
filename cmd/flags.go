@@ -50,6 +50,9 @@ var (
 		cli.IntFlag{Name: "docker-kernel-memory", Usage: "Set docker kernel memory limit in MB NOTIMPLEMENTED", Hidden: true},
 		cli.BoolFlag{Name: "docker-cleanup-image", Usage: "Remove image from the Docker when finished pushing them", Hidden: true},
 		cli.StringFlag{Name: "docker-network", Value: "", Usage: "Docker network name.", Hidden: true},
+
+		cli.StringFlag{Name: "rdd-service-uri", Value: "", Usage: "Rempte Docker Daemon API Service endpoint", Hidden: true},
+		cli.StringFlag{Name: "rdd-provision-timeout", Value: "300", Usage: "Timeout (in seconds) for Remote Docker Daemon provisioning from Remote Docker Daemon API Service", Hidden: true},
 	}
 
 	// These flags control where we store local files
