@@ -1,3 +1,5 @@
+//This proto file is used to generate client for Remote Docker Daemon service and should always have
+//contents same ad https://github.com/wercker/rdd/blob/master/rdd.proto
 syntax = "proto3";
 
 package rdd;

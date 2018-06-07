@@ -9,7 +9,7 @@ import (
 	context "golang.org/x/net/context"
 
 	"github.com/stretchr/testify/suite"
-	rddpb "github.com/wercker/wercker/rdd/rddpb"
+	rddpb "github.com/wercker/wercker/rddpb"
 	"github.com/wercker/wercker/util"
 	"google.golang.org/grpc"
 )

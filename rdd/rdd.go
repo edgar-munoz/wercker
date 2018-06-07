@@ -24,7 +24,7 @@ import (
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	grpcmw "github.com/mwitkow/go-grpc-middleware"
 	"github.com/wercker/pkg/log"
-	rddpb "github.com/wercker/wercker/rdd/rddpb"
+	rddpb "github.com/wercker/wercker/rddpb"
 	"google.golang.org/grpc"
 	"gopkg.in/urfave/cli.v1"
 )

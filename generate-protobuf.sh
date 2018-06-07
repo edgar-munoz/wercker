@@ -23,7 +23,7 @@ else
 fi
 
 cd $LOCAL
-
+echo $protoc
 echo "Generating gRPC server, gateway, swagger, flow"
 $protoc --go_out=plugins=grpc:$ROOT/rddpb \
         --grpc-gateway_out=logtostderr=true,request_context=true:$ROOT/rddpb \

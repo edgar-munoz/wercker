@@ -1402,10 +1402,10 @@
 			"revisionTime": "2018-05-22T22:42:51Z"
 		},
 		{
-			"checksumSHA1": "O2ItP5rmfrgxPufhjJXbFlXuyL8=",
+			"checksumSHA1": "FdeygjOuyR2p5v9b0kNOtzfpjS4=",
 			"path": "github.com/golang/protobuf/ptypes/timestamp",
-			"revision": "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175",
-			"revisionTime": "2018-02-02T18:43:18Z"
+			"revision": "05f48f4eaf0e05663b562bab533cdd472238ce29",
+			"revisionTime": "2018-06-06T20:26:30Z"
 		},
 		{
 			"checksumSHA1": "qp5RRqPMl2JcyB1fAKnU9ZwxVkc=",
@@ -1544,6 +1544,12 @@
 			"path": "github.com/grpc-ecosystem/grpc-gateway/runtime/internal",
 			"revision": "a5b66c16bab6156b1cc525e76159bdff463123ba",
 			"revisionTime": "2018-05-17T19:03:18Z"
+		},
+		{
+			"checksumSHA1": "CKrlwtWMXiznQrgS2o/obvP7HTM=",
+			"path": "github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis/google/api",
+			"revision": "4539fc575ec06dbbddc6975e7e8b503260270c3c",
+			"revisionTime": "2017-05-01T05:22:36Z"
 		},
 		{
 			"checksumSHA1": "wo1YltMuyBtAZTKC5yvdVnYB1oA=",
@@ -2492,12 +2498,6 @@
 			"path": "google.golang.org/appengine/urlfetch",
 			"revision": "9d8544a6b2c7df9cff240fcf92d7b2f59bc13416",
 			"revisionTime": "2017-10-31T19:43:29Z"
-		},
-		{
-			"checksumSHA1": "m1d4DsEkn6fuFF4b4O1ALS65yrk=",
-			"path": "google.golang.org/genproto/googleapis/api/annotations",
-			"revision": "694d95ba50e67b2e363f3483057db5d4910c18f9",
-			"revisionTime": "2018-05-23T21:25:16Z"
 		},
 		{
 			"checksumSHA1": "AvVpgwhxhJgjoSledwDtYrEKVE4=",
