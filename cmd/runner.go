@@ -529,7 +529,7 @@ func (p *Runner) SetupEnvironment(runnerCtx context.Context) (*RunnerShared, err
 		return shared, err
 	}
 	//If yaml file contains "docker:true" - configure a Remote Docker Daemon for the build
-	//by accessing a Remote Docker Daemon API Service
+	//by accessing Remote Docker Daemon API Service
 	rddURI := ""
 	if pipeline.Docker() {
 		if p.dockerOptions.RddServiceURI != "" {
