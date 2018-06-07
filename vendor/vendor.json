@@ -2500,6 +2500,12 @@
 			"revisionTime": "2017-10-31T19:43:29Z"
 		},
 		{
+			"checksumSHA1": "m1d4DsEkn6fuFF4b4O1ALS65yrk=",
+			"path": "google.golang.org/genproto/googleapis/api/annotations",
+			"revision": "81158efcc9f219c511e4d3c0d61a0e6e49c01a24",
+			"revisionTime": "2018-06-01T22:35:52Z"
+		},
+		{
 			"checksumSHA1": "AvVpgwhxhJgjoSledwDtYrEKVE4=",
 			"path": "google.golang.org/genproto/googleapis/rpc/status",
 			"revision": "ee236bd376b077c7a89f260c026c4735b195e459",
