@@ -92,6 +92,27 @@ func (s *EnvironmentSuite) TestExport() {
 	env = NewEnvironment("DOCKER_IO_USER=user", "DOCKER_IO_PASSWORD=$ChangeMe$ABC")
 	expected = []string{`export DOCKER_IO_USER="user"`, `export DOCKER_IO_PASSWORD=\$ChangeMe\$ABC`}
 	s.Equal(expected, env.Export())
+
+	env = NewEnvironment("TEST=test", "DOCKER_IO_USER=user", "DOCKER_IO_PASSWORD=Change$TEST")
+	expected = []string{`export TEST="test"`, `export DOCKER_IO_USER="user"`, `export DOCKER_IO_PASSWORD=Change$TEST`}
+	s.Equal(expected, env.Export())
+
+	env = NewEnvironment("TEST=test", "DOCKER_IO_USER=user", "DOCKER_IO_PASSWORD=${TEST}")
+	expected = []string{`export TEST="test"`, `export DOCKER_IO_USER="user"`, `export DOCKER_IO_PASSWORD=${TEST}`}
+	s.Equal(expected, env.Export())
+
+	env = NewEnvironment("DOCKER_IO_USER=user", "DOCKER_IO_PASSWORD=${TEST}")
+	expected = []string{`export DOCKER_IO_USER="user"`, `export DOCKER_IO_PASSWORD=\${TEST}`}
+	s.Equal(expected, env.Export())
+
+	env = NewEnvironment("DOCKER_IO_USER=user", "DOCKER_IO_PASSWORD=Change${TEST}Me")
+	expected = []string{`export DOCKER_IO_USER="user"`, `export DOCKER_IO_PASSWORD=Change\${TEST}Me`}
+	s.Equal(expected, env.Export())
+
+	env = NewEnvironment("TEST=test", "DOCKER_IO_USER=user", "DOCKER_IO_PASSWORD=Change${TEST}Me")
+	expected = []string{`export TEST="test"`, `export DOCKER_IO_USER="user"`, `export DOCKER_IO_PASSWORD=Change${TEST}Me`}
+	s.Equal(expected, env.Export())
+
 }
 
 func (s *EnvironmentSuite) TestLoadFile() {

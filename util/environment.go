@@ -87,7 +87,15 @@ func (e *Environment) Export() []string {
 				if _, ok := e.Map[data[i]]; ok {
 					data[i] = "$" + data[i]
 				} else {
-					data[i] = "\\$" + data[i]
+					if strings.HasPrefix(data[i], "{") && strings.Contains(data[i], "}") {
+						if _, ok := e.Map[(data[i])[1:strings.Index(data[i], "}")]]; ok {
+							data[i] = "$" + data[i]
+						} else {
+							data[i] = "\\$" + data[i]
+						}
+					} else {
+						data[i] = "\\$" + data[i]
+					}
 				}
 			}
 			value = strings.Join(data, "")
