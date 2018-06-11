@@ -54,7 +54,8 @@ func (s *PushSuite) TestEmptyPush() {
 		},
 	}
 	step, _ := NewDockerPushStep(config, options, nil)
-	step.InitEnv(nil)
+	ctx := core.NewEmitterContext(context.TODO())
+	step.InitEnv(ctx, nil)
 	repositoryName := step.authenticator.Repository(step.repository)
 	s.Equal("wcr.io/wercker/myproject", repositoryName)
 	tags := step.buildTags()
@@ -80,6 +81,7 @@ func (s *PushSuite) TestInferRegistryAndRepository() {
 		{"https://someregistry.com", "appowner/appname", "https://someregistry.com", "someregistry.com/appowner/appname"},
 	}
 
+	ctx := core.NewEmitterContext(context.TODO())
 	for _, tt := range repoTests {
 		options := &core.PipelineOptions{
 			ApplicationOwnerName:     "appowner",
@@ -89,7 +91,7 @@ func (s *PushSuite) TestInferRegistryAndRepository() {
 		opts := dockerauth.CheckAccessOptions{
 			Registry: tt.registry,
 		}
-		repo, registry, _ := InferRegistryAndRepository(tt.repository, opts.Registry, options)
+		repo, registry, _ := InferRegistryAndRepository(ctx, tt.repository, opts.Registry, options)
 		opts.Registry = registry
 		s.Equal(tt.expectedRegistry, opts.Registry, "%q, wants %q", opts.Registry, tt.expectedRegistry)
 		s.Equal(tt.expectedRepository, repo, "%q, wants %q", repo, tt.expectedRepository)
@@ -212,6 +214,7 @@ func (s *PushSuite) TestInferRegistryAndRepositoryInvalidInputs() {
 		{"https://someregistry.com", "https://someregistry.com/appowner/appname", "", "", "not a valid repository"},
 	}
 
+	ctx := core.NewEmitterContext(context.TODO())
 	for _, tt := range repoTests {
 		options := &core.PipelineOptions{
 			ApplicationOwnerName:     "appowner",
@@ -221,7 +224,7 @@ func (s *PushSuite) TestInferRegistryAndRepositoryInvalidInputs() {
 		opts := dockerauth.CheckAccessOptions{
 			Registry: tt.registry,
 		}
-		repo, registry, err := InferRegistryAndRepository(tt.repository, opts.Registry, options)
+		repo, registry, err := InferRegistryAndRepository(ctx, tt.repository, opts.Registry, options)
 		opts.Registry = registry
 		s.Error(err)
 		s.Contains(err.Error(), tt.errorMessage)

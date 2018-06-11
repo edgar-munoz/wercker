@@ -212,7 +212,7 @@ func (p *Runner) EnsureCode() (string, error) {
 			return ignores
 		}
 
-		// This is a hack to get rid of complaint that builds folder does not exist. 
+		// This is a hack to get rid of complaint that builds folder does not exist.
 		if p.options.LocalFileStore != "" {
 			os.MkdirAll(fmt.Sprintf("%s/builds", p.options.WorkingDir), 0700)
 		}
@@ -522,7 +522,7 @@ func (p *Runner) SetupEnvironment(runnerCtx context.Context) (*RunnerShared, err
 		sr.Message = err.Error()
 		return shared, err
 	}
-	pipeline.InitEnv(p.options.HostEnv)
+	pipeline.InitEnv(runnerCtx, p.options.HostEnv)
 	shared.pipeline = pipeline
 
 	// Fetch the box
@@ -683,7 +683,7 @@ func (p *Runner) RunStep(ctx context.Context, shared *RunnerShared, step core.St
 		}
 	}
 
-	err := step.InitEnv(shared.pipeline.Env())
+	err := step.InitEnv(ctx, shared.pipeline.Env())
 	if err != nil {
 		sr.Message = err.Error()
 		return sr, fmt.Errorf("Step initEnv failed with error message: %s", err.Error())

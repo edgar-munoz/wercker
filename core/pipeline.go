@@ -55,8 +55,8 @@ type Pipeline interface {
 	AfterSteps() []Step     // base
 
 	// Methods
-	CommonEnv() [][]string     // base
-	InitEnv(*util.Environment) // impl
+	CommonEnv() [][]string                      // base
+	InitEnv(context.Context, *util.Environment) // impl
 	CollectArtifact(context.Context, string) (*Artifact, error)
 	CollectCache(context.Context, string) error
 	LocalSymlink()

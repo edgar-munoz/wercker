@@ -87,7 +87,7 @@ func NewDockerRunStep(stepConfig *core.StepConfig, options *core.PipelineOptions
 }
 
 // InitEnv parses our data into our config
-func (s *DockerRunStep) InitEnv(env *util.Environment) error {
+func (s *DockerRunStep) InitEnv(ctx context.Context, env *util.Environment) error {
 	err := s.configure(env)
 	return err
 }
