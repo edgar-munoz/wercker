@@ -80,7 +80,7 @@ func NewWatchStep(stepConfig *core.StepConfig, options *core.PipelineOptions, do
 }
 
 // InitEnv parses our data into our config
-func (s *WatchStep) InitEnv(env *util.Environment) error {
+func (s *WatchStep) InitEnv(ctx context.Context, env *util.Environment) error {
 	if code, ok := s.data["code"]; ok {
 		s.Code = code
 	}

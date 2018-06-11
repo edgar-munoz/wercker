@@ -71,7 +71,7 @@ func NewStoreContainerStep(stepConfig *core.StepConfig, options *core.PipelineOp
 }
 
 // InitEnv preps our env
-func (s *StoreContainerStep) InitEnv(env *util.Environment) error {
+func (s *StoreContainerStep) InitEnv(ctx context.Context, env *util.Environment) error {
 	// NOP
 	return nil
 }

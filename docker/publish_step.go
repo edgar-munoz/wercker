@@ -79,7 +79,7 @@ func NewPublishStep(stepConfig *core.StepConfig, options *core.PipelineOptions, 
 }
 
 // InitEnv parses our data into our config
-func (s *PublishStep) InitEnv(env *util.Environment) error {
+func (s *PublishStep) InitEnv(ctx context.Context, env *util.Environment) error {
 	if owner, ok := s.data["owner"]; ok {
 		s.user = env.Interpolate(owner)
 	}

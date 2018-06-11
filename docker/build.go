@@ -42,7 +42,7 @@ func (b *DockerBuild) LocalSymlink() {
 }
 
 // InitEnv sets up the internal state of the environment for the build
-func (b *DockerBuild) InitEnv(hostEnv *util.Environment) {
+func (b *DockerBuild) InitEnv(ctx context.Context, hostEnv *util.Environment) {
 	env := b.Env()
 
 	a := [][]string{

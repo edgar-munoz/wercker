@@ -68,7 +68,7 @@ func NewShellStep(stepConfig *core.StepConfig, options *core.PipelineOptions, do
 }
 
 // InitEnv parses our data into our config
-func (s *ShellStep) InitEnv(env *util.Environment) error {
+func (s *ShellStep) InitEnv(ctx context.Context, env *util.Environment) error {
 	if code, ok := s.data["code"]; ok {
 		s.Code = code
 	}

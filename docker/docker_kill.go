@@ -64,7 +64,7 @@ func NewDockerKillStep(stepConfig *core.StepConfig, options *core.PipelineOption
 }
 
 // InitEnv parses our data into our config
-func (s *DockerKillStep) InitEnv(env *util.Environment) error {
+func (s *DockerKillStep) InitEnv(ctx context.Context, env *util.Environment) error {
 	return nil
 }
 
