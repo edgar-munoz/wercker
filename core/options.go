@@ -27,10 +27,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/codegangsta/cli"
 	"github.com/pborman/uuid"
 	"github.com/wercker/wercker/util"
 	"gopkg.in/mgo.v2/bson"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (

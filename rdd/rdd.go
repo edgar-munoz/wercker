@@ -40,7 +40,7 @@ const (
 //RDD - struct containing all parameters and client for RDD access
 type RDD struct {
 	rddServiceEndpoint  string
-	rddProvisionTimeout int64
+	rddProvisionTimeout time.Duration
 	runID               string
 	rddClient           rddpb.RddClient
 	rddDetails          *rddDetails
@@ -52,7 +52,7 @@ type rddDetails struct {
 }
 
 //New - initialize a RDD construct, check connection with RDD API service and create a client
-func New(rddServiceEndpoint string, rddProvisionTimeout int64, runID string) (*RDD, error) {
+func New(rddServiceEndpoint string, rddProvisionTimeout time.Duration, runID string) (*RDD, error) {
 	log.Debug("Connecting to rdd service")
 
 	rddInterceptors := []grpc.UnaryClientInterceptor{
@@ -96,19 +96,18 @@ func (rdd *RDD) Provision(ctx context.Context) (string, error) {
 		return "", cli.NewExitError(errMsg, 1)
 	}
 
-	timeoutThresholdInSeconds, err := time.ParseDuration(fmt.Sprintf("%ds", rdd.rddProvisionTimeout))
-	if err != nil {
-		log.Warningf("Error parsing timeout value from input rdd-provision-timeout of %d, Error: %s. Default value of 300s will be used.", rdd.rddProvisionTimeout, err.Error())
-		timeoutThresholdInSeconds = 300 * time.Second
+	if rdd.rddProvisionTimeout <= 0*time.Second {
+		log.Warningf("Invalid timeout value from input rdd-provision-timeout of %s, Default value of 300s will be used.", rdd.rddProvisionTimeout.String())
+		rdd.rddProvisionTimeout = 300 * time.Second
 	}
-	timeout := time.After(timeoutThresholdInSeconds)
+	timeout := time.After(rdd.rddProvisionTimeout)
 	tick := time.Tick(5 * time.Second)
 
 	for {
 		select {
 
 		case <-timeout:
-			errMsg := fmt.Sprintf(errorMsgTimeOut, rdd.rddServiceEndpoint, rdd.runID, int(timeoutThresholdInSeconds.Seconds()))
+			errMsg := fmt.Sprintf(errorMsgTimeOut, rdd.rddServiceEndpoint, rdd.runID, int(rdd.rddProvisionTimeout.Seconds()))
 			log.Error(errMsg)
 			return "", cli.NewExitError(errMsg, 1)
 

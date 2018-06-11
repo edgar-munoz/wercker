@@ -523,15 +523,6 @@
 			"revisionTime": "2018-03-01T21:28:15Z"
 		},
 		{
-			"checksumSHA1": "OIMQkl9E8WtJhZvYkg4o5yOd5Sw=",
-			"origin": "github.com/wercker/codegangsta-cli",
-			"path": "github.com/codegangsta/cli",
-			"revision": "863dc328534d8e22f36386bce3da48dc572a8ddf",
-			"revisionTime": "2015-02-12T14:12:15Z",
-			"version": "hidden_flags",
-			"versionExact": "hidden_flags"
-		},
-		{
 			"checksumSHA1": "9UUP0nQdKxvJZOFg7e8FP4gzzgA=",
 			"path": "github.com/coreos/etcd/raft/raftpb",
 			"revision": "897cadc88c5f4b01a8df6b760ec4b68ff1ece842",
@@ -2660,6 +2651,12 @@
 			"path": "gopkg.in/urfave/cli.v1",
 			"revision": "cfb38830724cc34fedffe9a2a29fb54fa9169cd1",
 			"revisionTime": "2017-08-11T01:42:03Z"
+		},
+		{
+			"checksumSHA1": "yS8myTnbXLqyY/tjblg8NoW3sCE=",
+			"path": "gopkg.in/urfave/cli.v1",
+			"revision": "0bdeddeeb0f650497d603c4ad7b20cfe685682f6",
+			"revisionTime": "2016-11-22T04:36:10Z"
 		},
 		{
 			"checksumSHA1": "orryOwzzDA/WtXbvrmVC2ikpEis=",

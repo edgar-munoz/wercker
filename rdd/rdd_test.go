@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	context "golang.org/x/net/context"
 
@@ -77,7 +78,7 @@ func (c *FakeRDDClient) StubRddStatus(req *rddpb.RDDStatusRequest, result *rddpb
 
 var _ rddpb.RddClient = &FakeRDDClient{}
 var defaultRDDServiceEndPoint = "localhost:4621"
-var defaultRDDProvisionTimeOut = int64(100)
+var defaultRDDProvisionTimeOut = 300 * time.Second
 var defaultContext = context.Background()
 var defaultRDDClient = &FakeRDDClient{rddProvStubs: []*rddProvStub{}}
 var rdd = &RDD{
@@ -135,7 +136,7 @@ func (s *RDDSuite) TestProvision_TimeoutOnRDDProvision() {
 	rddStatusResponse := &rddpb.RDDStatusResponse{RunID: runIDTimeOut, State: rddpb.DaemonState_provisioning}
 	defaultRDDClient.StubRddStatus(rddStatusRequest, rddStatusResponse, nil)
 	rdd.runID = runIDTimeOut
-	rdd.rddProvisionTimeout = 5
+	rdd.rddProvisionTimeout = 5 * time.Second
 	rddURI, err := rdd.Provision(defaultContext)
 	s.Empty(rddURI, "rddUri should be empty, got %s", rddURI)
 	s.Equal(err.Error(), fmt.Sprintf(errorMsgTimeOut, defaultRDDServiceEndPoint, runIDTimeOut, 5))

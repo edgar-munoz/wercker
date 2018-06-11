@@ -20,12 +20,12 @@ import (
 	"net/url"
 	"path/filepath"
 
-	"github.com/codegangsta/cli"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/wercker/wercker/core"
 	"github.com/wercker/wercker/docker"
 	"github.com/wercker/wercker/util"
 	"golang.org/x/net/context"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 type DockerBuilder struct {
@@ -74,7 +74,7 @@ func (b *DockerBuilder) getOptions(env *util.Environment, config *core.BoxConfig
 	if err := set.Parse(args); err != nil {
 		return nil, err
 	}
-	ctx := cli.NewContext(nil, set, set)
+	ctx := cli.NewContext(nil, set, nil)
 	settings := util.NewCLISettings(ctx)
 	newOptions, err := core.NewBuildOptions(settings, env)
 	if err != nil {

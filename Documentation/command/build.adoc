@@ -144,7 +144,7 @@ OPTIONS
 --rdd-service-uri::
   Remote Docker Daemon API Service endpoint. Remote Docker Daemon API service is used to configure Remote Docker Daemon for builds.
 --rdd-provision-timeout::
-  Timeout (in seconds) for Remote Docker Daemon provisioning from Remote Docker Daemon API Service
+  Timeout for Remote Docker Daemon provisioning from Remote Docker Daemon API Service
   Default;;
-    300
+    300s
   

@@ -40,7 +40,7 @@ type Options struct {
 	CleanupImage        bool
 	NetworkName         string
 	RddServiceURI       string
-	RddProvisionTimeout int64
+	RddProvisionTimeout time.Duration
 }
 
 func guessAndUpdateDockerOptions(ctx context.Context, opts *Options, e *util.Environment) {
@@ -127,7 +127,7 @@ func NewOptions(ctx context.Context, c util.Settings, e *util.Environment) (*Opt
 	dockerCleanupImage, _ := c.Bool("docker-cleanup-image")
 	dockerNetworkName, _ := c.String("docker-network")
 	rddServiceURI, _ := c.String("rdd-service-uri")
-	rddProvisionTimeout, _ := c.Int("rdd-provision-timeout")
+	rddProvisionTimeout, _ := c.Duration("rdd-provision-timeout")
 
 	speculativeOptions := &Options{
 		Host:                dockerHost,
@@ -144,7 +144,7 @@ func NewOptions(ctx context.Context, c util.Settings, e *util.Environment) (*Opt
 		CleanupImage:        dockerCleanupImage,
 		NetworkName:         dockerNetworkName,
 		RddServiceURI:       rddServiceURI,
-		RddProvisionTimeout: int64(rddProvisionTimeout),
+		RddProvisionTimeout: rddProvisionTimeout,
 	}
 
 	// We're going to try out a few settings and set DockerHost if
