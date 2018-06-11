@@ -2,13 +2,28 @@
 
 - Changes to access RDD API Service and inject RDD in build pipelines (#421)
 
-## v1.0.1238 (2018-05-23)
+## v1.0.1244 (2018-05-29)
+- Changes for WRKR-347 Allow switching between app/dev sites (#419)
 
+## v1.0.1238 (2018-05-23)
+- Wercker runner config (#417)
 - Docker file integration (#415)
 
 ## v1.0.1230 (2018-05-15)
 
 - Support for publishing private steps (#409)
+- Wercker CLI changes for external runner (#406)
+    Changes for WRKR-76 and WRKR-207
+    Adding code to format json log entries, write log to disk
+    Clean up logging to disk
+    Cleanup logging when JobId encountered.
+    Fix --nowait option not working
+    Fix to use proper logger
+    Allow store path as env variable WERCKER_RUNNER_STOREPATH. Make sure directory is created if doesn't exist
+    Add informational message telling user where local output is stored.
+    Runner configure without remote repository pull
+    * Changes for WRKR-76, WRKR-77, and WRKR-207
+    * Fix typo in flags definition
 
 ## v1.0.1226 (2018-05-11)
 
@@ -17,6 +32,7 @@
 
 ## v1.0.1223 (2018-05-08)
 
+- External runner changes removed by prior revert (merge pull request #384) 
 - Cosmetic changes for docker file integration (#407)
 - Docker file integration, docker-networks, docker-run, docker-kill (#405)
 
