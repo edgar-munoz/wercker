@@ -2,6 +2,7 @@ package dockerlocal
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/url"
 	"strings"
@@ -53,45 +54,41 @@ func (s *PushSuite) TestEmptyPush() {
 			AuthToken: "su69persec420uret0k3n",
 		},
 	}
-	step, _ := NewDockerPushStep(config, options, nil)
+	step, err := NewDockerPushStep(config, options, nil)
+	s.NoError(err)
 	ctx := core.NewEmitterContext(context.TODO())
-	step.InitEnv(ctx, nil)
-	repositoryName := step.authenticator.Repository(step.repository)
-	s.Equal("wcr.io/wercker/myproject", repositoryName)
-	tags := step.buildTags()
-	s.Equal([]string{"latest", "master-s4k2r0d6a9b"}, tags)
+	err = step.InitEnv(ctx, nil)
+	s.Equal("Repository not specified", err.Error())
+	s.Empty(step.repository)
 }
 
 func (s *PushSuite) TestInferRegistryAndRepository() {
-	testWerckerRegistry, _ := url.Parse("https://test.wcr.io/v2")
 	repoTests := []struct {
 		registry           string
 		repository         string
 		expectedRegistry   string
 		expectedRepository string
+		expectedError      error
 	}{
-		{"", "appowner/appname", "", "appowner/appname"},
-		{"", "", testWerckerRegistry.String(), testWerckerRegistry.Host + "/appowner/appname"},
-		{"", "someregistry.com/appowner/appname", "https://someregistry.com/v2/", "someregistry.com/appowner/appname"},
-		{"", "appOWNER/appname", "", "appowner/appname"},
-		{"https://someregistry.com", "appowner/appname", "https://someregistry.com", "someregistry.com/appowner/appname"},
-		{"https://someregistry.com/v1", "appowner/appname", "https://someregistry.com/v1", "someregistry.com/appowner/appname"},
-		{"https://someregistry.com/v2", "appowner/appname", "https://someregistry.com/v2", "someregistry.com/appowner/appname"},
-		{"https://someregistry.com", "someotherregistry.com/appowner/appname", "https://someotherregistry.com/v2/", "someotherregistry.com/appowner/appname"},
-		{"https://someregistry.com", "appowner/appname", "https://someregistry.com", "someregistry.com/appowner/appname"},
+		{"", "appowner/appname", "", "appowner/appname", nil},
+		{"", "", "", "", fmt.Errorf("Repository not specified")},
+		{"", "someregistry.com/appowner/appname", "https://someregistry.com/v2/", "someregistry.com/appowner/appname", nil},
+		{"", "appOWNER/appname", "", "appowner/appname", nil},
+		{"https://someregistry.com", "appowner/appname", "https://someregistry.com", "someregistry.com/appowner/appname", nil},
+		{"https://someregistry.com/v1", "appowner/appname", "https://someregistry.com/v1", "someregistry.com/appowner/appname", nil},
+		{"https://someregistry.com/v2", "appowner/appname", "https://someregistry.com/v2", "someregistry.com/appowner/appname", nil},
+		{"https://someregistry.com", "someotherregistry.com/appowner/appname", "https://someotherregistry.com/v2/", "someotherregistry.com/appowner/appname", nil},
+		{"https://someregistry.com", "appowner/appname", "https://someregistry.com", "someregistry.com/appowner/appname", nil},
 	}
 
 	ctx := core.NewEmitterContext(context.TODO())
 	for _, tt := range repoTests {
-		options := &core.PipelineOptions{
-			ApplicationOwnerName:     "appowner",
-			ApplicationName:          "appname",
-			WerckerContainerRegistry: testWerckerRegistry,
-		}
+		options := &core.PipelineOptions{}
 		opts := dockerauth.CheckAccessOptions{
 			Registry: tt.registry,
 		}
-		repo, registry, _ := InferRegistryAndRepository(ctx, tt.repository, opts.Registry, options)
+		repo, registry, err := InferRegistryAndRepository(ctx, tt.repository, opts.Registry, options)
+		s.Equal(tt.expectedError, err)
 		opts.Registry = registry
 		s.Equal(tt.expectedRegistry, opts.Registry, "%q, wants %q", opts.Registry, tt.expectedRegistry)
 		s.Equal(tt.expectedRepository, repo, "%q, wants %q", repo, tt.expectedRepository)
