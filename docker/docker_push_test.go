@@ -53,8 +53,15 @@ func (s *PushSuite) TestEmptyPush() {
 			AuthToken: "su69persec420uret0k3n",
 		},
 	}
-	step, _ := NewDockerPushStep(config, options, nil)
-	step.InitEnv(context.TODO(), nil)
+	step, err := NewDockerPushStep(config, options, nil)
+	s.Nil(err)
+	s.NotNil(step)
+
+	mockEmittor := core.NewNormalizedEmitter()
+	ctx := context.TODO()
+	ctx = context.WithValue(ctx, "Emitter", mockEmittor)
+	err = step.InitEnv(ctx, nil)
+	s.Nil(err)
 	repositoryName := step.authenticator.Repository(step.repository)
 	s.Equal("wcr.io/wercker/myproject", repositoryName)
 	tags := step.buildTags()
@@ -80,6 +87,10 @@ func (s *PushSuite) TestInferRegistryAndRepository() {
 		{"https://someregistry.com", "appowner/appname", "https://someregistry.com", "someregistry.com/appowner/appname"},
 	}
 
+	mockEmittor := core.NewNormalizedEmitter()
+	ctx := context.TODO()
+	ctx = context.WithValue(ctx, "Emitter", mockEmittor)
+
 	for _, tt := range repoTests {
 		options := &core.PipelineOptions{
 			ApplicationOwnerName:     "appowner",
@@ -89,7 +100,7 @@ func (s *PushSuite) TestInferRegistryAndRepository() {
 		opts := dockerauth.CheckAccessOptions{
 			Registry: tt.registry,
 		}
-		repo, registry, _ := InferRegistryAndRepository(context.TODO(), tt.repository, opts.Registry, options)
+		repo, registry, _ := InferRegistryAndRepository(ctx, tt.repository, opts.Registry, options)
 		opts.Registry = registry
 		s.Equal(tt.expectedRegistry, opts.Registry, "%q, wants %q", opts.Registry, tt.expectedRegistry)
 		s.Equal(tt.expectedRepository, repo, "%q, wants %q", repo, tt.expectedRepository)

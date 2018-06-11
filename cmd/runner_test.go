@@ -66,7 +66,7 @@ func (s *MockStep) ShouldSyncEnv() bool {
 	return false
 }
 
-func (s *MockStep) InitEnv(ctx context.Context, *util.Environment) error {
+func (s *MockStep) InitEnv(context.Context, *util.Environment) error {
 	return errors.New(initEnvErrorMessage)
 }
 
@@ -96,7 +96,7 @@ func (s *MockPipeline) DockerTag() string {
 	return ""
 }
 
-func (s *MockPipeline) InitEnv(ctx context.Context, *util.Environment) {
+func (s *MockPipeline) InitEnv(context.Context, *util.Environment) {
 
 }
 
