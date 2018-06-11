@@ -32,7 +32,7 @@ import (
 const (
 	errorMsgFailOnProvision             = "Error invoking Provision() from Remote Docker Daemon API service at %s for runID %s, Error: %s"
 	errorMsgInvalidProvisioningResponse = "Invalid response by Provision() from Remote Docker Daemon API service at %s for runID %s, ResponseID is empty."
-	errorMsgTimeOut                     = "Remote Docker Daemon provisioning timed out from Remote Docker Daemon API  service at %s for runID %s after %d seconds."
+	errorMsgTimeOut                     = "Remote Docker Daemon provisioning timed out from Remote Docker Daemon API  service at %s for runID %s after %s."
 	errorMsgGetStatusError              = "Error provisioning Remote Docker Daemon from Remote Docker Daemon API service at %s for runID %s."
 	errorMsgInvalidRDDUrl               = "Invalid Remote Docker Daemon uri returned from Remote Docker Daemon API service service at %s for runID %s."
 )
@@ -107,7 +107,7 @@ func (rdd *RDD) Provision(ctx context.Context) (string, error) {
 		select {
 
 		case <-timeout:
-			errMsg := fmt.Sprintf(errorMsgTimeOut, rdd.rddServiceEndpoint, rdd.runID, int(rdd.rddProvisionTimeout.Seconds()))
+			errMsg := fmt.Sprintf(errorMsgTimeOut, rdd.rddServiceEndpoint, rdd.runID, rdd.rddProvisionTimeout.String())
 			log.Error(errMsg)
 			return "", cli.NewExitError(errMsg, 1)
 

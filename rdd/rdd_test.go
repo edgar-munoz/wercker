@@ -139,7 +139,7 @@ func (s *RDDSuite) TestProvision_TimeoutOnRDDProvision() {
 	rdd.rddProvisionTimeout = 5 * time.Second
 	rddURI, err := rdd.Provision(defaultContext)
 	s.Empty(rddURI, "rddUri should be empty, got %s", rddURI)
-	s.Equal(err.Error(), fmt.Sprintf(errorMsgTimeOut, defaultRDDServiceEndPoint, runIDTimeOut, 5))
+	s.Equal(err.Error(), fmt.Sprintf(errorMsgTimeOut, defaultRDDServiceEndPoint, runIDTimeOut, rdd.rddProvisionTimeout.String()))
 }
 
 //TestProvision_ErrorOnGetStatus - Tests the scenario when GetStatus() API invoked from Get()
