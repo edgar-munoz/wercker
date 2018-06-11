@@ -682,6 +682,7 @@ func InferRegistryAndRepository(ctx context.Context, repository string, registry
 			Logs: "Wombat",
 		})
 
+		_logger.Errorln("This is a token error message")
 		_logger.Infoln("No repository specified - using " + inferredRepository)
 		_logger.Infoln("username/password fields are ignored while using wcr.io registry, supplied authToken (if provided) will be used for authorization to wcr.io registry")
 		return inferredRepository, inferredRegistry, nil
