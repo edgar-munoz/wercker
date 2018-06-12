@@ -533,6 +533,9 @@ func (p *Runner) SetupEnvironment(runnerCtx context.Context) (*RunnerShared, err
 	rddURI := ""
 	if pipeline.Docker() {
 		if p.dockerOptions.RddServiceURI != "" {
+			p.emitter.Emit(core.Logs, &core.LogsArgs{
+				Logs: "Setting up Remote Docker environment..",
+			})
 			rddImpl, err := rdd.New(p.dockerOptions.RddServiceURI, p.dockerOptions.RddProvisionTimeout, p.options.RunID)
 			if err != nil {
 				sr.Message = err.Error()
