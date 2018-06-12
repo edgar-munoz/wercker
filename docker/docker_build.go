@@ -231,8 +231,6 @@ func (s *DockerBuildStep) Execute(ctx context.Context, sess *core.Session) (int,
 
 	err = EmitStatus(e, imageBuildResponse.Body, s.options)
 	if err != nil {
-		// the build response contains an error message
-		s.logger.Errorln("Error building image:", err)
 		return -1, err
 	}
 	imageBuildResponse.Body.Close()

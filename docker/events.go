@@ -37,14 +37,13 @@ func EmitStatus(e *core.NormalizedEmitter, r io.Reader, options *core.PipelineOp
 		}
 
 		line, err := s.ProcessJSONMessage(&m)
-		if err != nil {
-			return err
-		}
 		e.Emit(core.Logs, &core.LogsArgs{
 			Logs:   line,
 			Stream: "docker",
 		})
-
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
