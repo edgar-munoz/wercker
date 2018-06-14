@@ -1,9 +1,8 @@
 ## unreleased
 
-- Fix wercker --help (#426)
-
 ## v1.0.1260 (2018-06-14)
 - Changes to access RDD API Service and inject RDD in build pipelines (#421)
+- Fix wercker --help (#426)
 
 ## v1.0.1244 (2018-05-29)
 - Changes for WRKR-347 Allow switching between app/dev sites (#419)
