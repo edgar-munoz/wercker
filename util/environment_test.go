@@ -113,6 +113,10 @@ func (s *EnvironmentSuite) TestExport() {
 	expected = []string{`export TEST="test"`, `export DOCKER_IO_USER="user"`, `export DOCKER_IO_PASSWORD=Change${TEST}Me`}
 	s.Equal(expected, env.Export())
 
+	env = NewEnvironment("TEST=test", "DOCKER_IO_USER=user", "DOCKER_IO_PASSWORD=NOT\\$ME")
+	expected = []string{`export TEST="test"`, `export DOCKER_IO_USER="user"`, `export DOCKER_IO_PASSWORD=NOT\$ME`}
+	s.Equal(expected, env.Export())
+
 }
 
 func (s *EnvironmentSuite) TestLoadFile() {
