@@ -29,6 +29,7 @@ import (
 	"github.com/wercker/wercker/core"
 	"github.com/wercker/wercker/docker"
 	"github.com/wercker/wercker/event"
+	"github.com/wercker/wercker/rdd"
 	"github.com/wercker/wercker/util"
 	"golang.org/x/net/context"
 )
@@ -86,6 +87,7 @@ type Runner struct {
 	logger        *util.LogEntry
 	emitter       *core.NormalizedEmitter
 	formatter     *util.Formatter
+	rdd           *rdd.RDD
 }
 
 // NewRunner from global options
@@ -212,7 +214,7 @@ func (p *Runner) EnsureCode() (string, error) {
 			return ignores
 		}
 
-		// This is a hack to get rid of complaint that builds folder does not exist. 
+		// This is a hack to get rid of complaint that builds folder does not exist.
 		if p.options.LocalFileStore != "" {
 			os.MkdirAll(fmt.Sprintf("%s/builds", p.options.WorkingDir), 0700)
 		}
@@ -446,6 +448,10 @@ func (p *Runner) StartStep(ctx *RunnerShared, step core.Step, order int) *util.F
 func (p *Runner) StartBuild(options *core.PipelineOptions) *util.Finisher {
 	p.emitter.Emit(core.BuildStarted, &core.BuildStartedArgs{Options: options})
 	return util.NewFinisher(func(result interface{}) {
+		//Deprovision any Remote Docker Daemon configured for this build
+		if p.rdd != nil {
+			p.rdd.Deprovision()
+		}
 		r, ok := result.(*core.BuildFinishedArgs)
 		if !ok {
 			return
@@ -522,6 +528,34 @@ func (p *Runner) SetupEnvironment(runnerCtx context.Context) (*RunnerShared, err
 		sr.Message = err.Error()
 		return shared, err
 	}
+	//If yaml file contains "docker:true" - configure a Remote Docker Daemon for the build
+	//by accessing Remote Docker Daemon API Service
+	rddURI := ""
+	if pipeline.Docker() {
+		if p.dockerOptions.RddServiceURI != "" {
+			p.emitter.Emit(core.Logs, &core.LogsArgs{
+				Logs: "Setting up Remote Docker environment..",
+			})
+			rddImpl, err := rdd.New(p.dockerOptions.RddServiceURI, p.dockerOptions.RddProvisionTimeout, p.options.RunID)
+			if err != nil {
+				sr.Message = err.Error()
+				return shared, err
+			}
+			rddURI, err = rddImpl.Provision(runnerCtx)
+			if err != nil {
+				sr.Message = err.Error()
+				return shared, err
+			}
+			if rddURI == "" {
+				err = fmt.Errorf("Unable to provision RDD for runID %s ", p.options.RunID)
+				sr.Message = err.Error()
+				return shared, err
+			}
+			p.rdd = rddImpl
+		} else {
+			rddURI = p.dockerOptions.Host
+		}
+	}
 	pipeline.InitEnv(p.options.HostEnv)
 	shared.pipeline = pipeline
 
@@ -595,7 +629,7 @@ func (p *Runner) SetupEnvironment(runnerCtx context.Context) (*RunnerShared, err
 	}
 
 	// Boot up our main container, it will run the services
-	container, err := box.Run(runnerCtx, pipeline.Env())
+	container, err := box.Run(runnerCtx, pipeline.Env(), rddURI)
 	if err != nil {
 		sr.Message = err.Error()
 		return shared, err

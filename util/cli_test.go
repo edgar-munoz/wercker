@@ -23,8 +23,8 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/codegangsta/cli"
 	"github.com/stretchr/testify/suite"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 func flagSet(name string, flags []cli.Flag) *flag.FlagSet {
@@ -42,7 +42,7 @@ func testContext() *cli.Context {
 	})
 	args := []string{"--globalexist=1"}
 	set.Parse(args)
-	return cli.NewContext(nil, set, set)
+	return cli.NewContext(nil, set, nil)
 }
 
 type CLISuite struct {

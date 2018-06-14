@@ -27,9 +27,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/codegangsta/cli"
 	"github.com/pborman/uuid"
 	"github.com/wercker/wercker/util"
+	"gopkg.in/mgo.v2/bson"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (
@@ -710,7 +711,7 @@ func NewBuildOptions(c util.Settings, e *util.Environment) (*PipelineOptions, er
 		return nil, err
 	}
 	if pipelineOpts.RunID == "" {
-		pipelineOpts.RunID = uuid.NewRandom().String()
+		pipelineOpts.RunID = bson.NewObjectId().Hex()
 	}
 	return pipelineOpts, nil
 }

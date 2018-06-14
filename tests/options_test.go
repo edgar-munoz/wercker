@@ -21,12 +21,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/codegangsta/cli"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
 	"github.com/wercker/wercker/cmd"
 	"github.com/wercker/wercker/core"
 	"github.com/wercker/wercker/util"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (

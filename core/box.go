@@ -35,6 +35,6 @@ type Box interface {
 	Restart() (*docker.Container, error)
 	AddService(ServiceBox)
 	Fetch(context.Context, *util.Environment) (*docker.Image, error)
-	Run(context.Context, *util.Environment) (*docker.Container, error)
+	Run(context.Context, *util.Environment, string) (*docker.Container, error)
 	RecoverInteractive(string, Pipeline, Step) error
 }
