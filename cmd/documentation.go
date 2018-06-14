@@ -107,7 +107,7 @@ DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
 
 OPTIONS:
-{{range .Flags}}{{if not .IsHidden}}   {{. | shortFlag}}{{ "\n" }}{{end}}{{end}}{{end}}
+{{range .Flags}}{{if not .Hidden}}   {{. | shortFlag}}{{ "\n" }}{{end}}{{end}}{{end}}
 `
 	cli.AppHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
@@ -126,7 +126,7 @@ COMMANDS:
    {{range .Commands}}{{.Name}}{{with .ShortName}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
    {{end}}{{if .Flags}}
 GLOBAL OPTIONS:
-{{range .Flags}}{{if not .IsHidden}}   {{. | shortFlag}}{{ "\n" }}{{end}}{{end}}{{end}}
+{{range .Flags}}{{if not .Hidden}}   {{. | shortFlag}}{{ "\n" }}{{end}}{{end}}{{end}}
 `
 
 	cli.HelpPrinter = func(w io.Writer, templ string, data interface{}) {
