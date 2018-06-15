@@ -172,6 +172,17 @@ func (s *DockerBuildStep) Execute(ctx context.Context, sess *core.Session) (int,
 		return -1, errors.New("image-name not set")
 	}
 
+	tarfileName := "currentSourceUnderRoot.tar"
+	err := s.buildTarfile(ctx, sess, tarfileName)
+	if err != nil {
+		return -1, err
+	}
+	return s.buildImage(ctx, sess, tarfileName)
+}
+
+// buildTarfile creates the tarfile that will be sent to the daemon to perform the docker build
+func (s *DockerBuildStep) buildTarfile(ctx context.Context, sess *core.Session, tarfileName string) error {
+
 	// This is clearly only relevant to docker so we're going to dig into the
 	// transport internals a little bit to get the container ID
 	dt := sess.Transport().(*DockerTransport) //              TODO Change this to use code which doesn't use fsouza client
@@ -181,18 +192,23 @@ func (s *DockerBuildStep) Execute(ctx context.Context, sess *core.Session) (int,
 	// and save it as a tarfile currentSource.tar
 	_, err := s.CollectArtifact(ctx, containerID)
 	if err != nil {
-		return -1, err
+		return err
 	}
 
 	// In currentSource.tar, the source directory is in /source
 	// Copy all the files that are under /source in currentSource.tar
-	// into the / directory of a new tarfile currentSourceInRoot.tar
+	// into the / directory of a new tarfile with the specified name
 	// This will be the tar we sent to the docker build command
-	currentSourceUnderRootTar := "currentSourceUnderRoot.tar"
-	err = s.buildInputTar("currentSource.tar", currentSourceUnderRootTar)
+	err = s.buildInputTar("currentSource.tar", tarfileName)
 	if err != nil {
-		return -1, err
+		return err
 	}
+	return nil
+}
+
+// buildImage builds an image by running the docker BuildImage function with  the specified tarfile
+func (s *DockerBuildStep) buildImage(ctx context.Context, sess *core.Session, tarfileName string) (int, error) {
+	s.logger.Debugln("Starting DockerBuildStep", s.data)
 
 	officialClient, err := NewOfficialDockerClient(s.dockerOptions)
 	if err != nil {
@@ -204,7 +220,7 @@ func (s *DockerBuildStep) Execute(ctx context.Context, sess *core.Session) (int,
 		return 1, err
 	}
 
-	tarFile, err := os.Open(s.options.HostPath(currentSourceUnderRootTar))
+	tarFile, err := os.Open(s.options.HostPath(tarfileName))
 	tarReader := bufio.NewReader(tarFile)
 
 	s.logger.Debugln("Build image")
