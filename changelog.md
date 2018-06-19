@@ -1,10 +1,10 @@
 ## unreleased
 
-## v1.0.1265 (2015-06-19)
+## v1.0.1265 (2018-06-19)
 
 - Fix wercker --help for subcommands(#432)
 
-## v1.0.1264 (2015-06-18)
+## v1.0.1264 (2018-06-18)
 
 - Collect report artifacts from a step even if it failed (#428)
 
