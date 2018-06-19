@@ -1,7 +1,14 @@
 ## unreleased
 
-## v1.0.1244 (2018-05-29)
+## v1.0.1264 (2015-06-18)
 
+- Collect report artifacts from a step even if it failed (#428)
+
+## v1.0.1260 (2018-06-14)
+- Changes to access RDD API Service and inject RDD in build pipelines (#421)
+- Fix wercker --help (#426)
+
+## v1.0.1244 (2018-05-29)
 - Changes for WRKR-347 Allow switching between app/dev sites (#419)
 
 ## v1.0.1238 (2018-05-23)

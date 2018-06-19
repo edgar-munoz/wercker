@@ -141,3 +141,10 @@ OPTIONS
   Wercker host to use for wercker reporter.
 --wercker-token::
   Wercker token to use for wercker reporter.
+--rdd-service-uri::
+  Remote Docker Daemon API Service endpoint. Remote Docker Daemon API service is used to configure Remote Docker Daemon for builds.
+--rdd-provision-timeout::
+  Timeout for Remote Docker Daemon provisioning from Remote Docker Daemon API Service
+  Default;;
+    300s
+  

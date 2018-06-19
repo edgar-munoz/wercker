@@ -188,6 +188,7 @@ type PipelineConfig struct {
 	StepsMap   map[string][]*RawStepConfig
 	Services   []*RawBoxConfig `yaml:"services"`
 	BasePath   string          `yaml:"base-path"`
+	Docker     bool            `yaml:"docker"`
 }
 
 var pipelineReservedWords = map[string]struct{}{
@@ -196,6 +197,7 @@ var pipelineReservedWords = map[string]struct{}{
 	"steps":       struct{}{},
 	"after-steps": struct{}{},
 	"base-path":   struct{}{},
+	"docker":      struct{}{},
 }
 
 // UnmarshalYAML in this case is a little involved due to the myriad shapes our
