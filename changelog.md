@@ -1,5 +1,7 @@
 ## unreleased
 
+- docker-push no longer defaults to wcr.io, and displays info messages in certain cases (#423)
+
 ## v1.0.1264 (2015-06-18)
 
 - Collect report artifacts from a step even if it failed (#428)
