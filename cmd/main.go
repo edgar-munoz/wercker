@@ -329,9 +329,8 @@ var (
 	}
 
 	dockerCommand = cli.Command{
-		Name:            "docker",
-		Usage:           "docker <docker-command> <args>...",
-		SkipFlagParsing: true,
+		Name:  "docker",
+		Usage: "docker <docker-command> <args>...",
 		Action: func(c *cli.Context) {
 			settings := util.NewCLISettings(c)
 			env := util.NewEnvironment(os.Environ()...)

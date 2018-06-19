@@ -132,7 +132,7 @@ GLOBAL OPTIONS:
 	cli.HelpPrinter = func(w io.Writer, templ string, data interface{}) {
 		writer := tabwriter.NewWriter(app.Writer, 0, 8, 1, '\t', 0)
 		t := template.Must(template.New("help").Funcs(
-			template.FuncMap{"shortFlag": shortFlag},
+			template.FuncMap{"shortFlag": shortFlag, "join": strings.Join},
 		).Parse(templ))
 		err := t.Execute(w, data)
 		if err != nil {
