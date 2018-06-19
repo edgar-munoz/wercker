@@ -649,7 +649,7 @@ func (s *DockerPushStep) buildAutherOpts(ctx context.Context, env *util.Environm
 }
 
 // log logs the specified message using the specified emitter
-func log(e *core.NormalizedEmitter, message string) {
+func emit(e *core.NormalizedEmitter, message string) {
 	e.Emit(core.Logs, &core.LogsArgs{
 		Logs: message,
 	})
@@ -698,12 +698,12 @@ func InferRegistryAndRepository(ctx context.Context, repository string, registry
 	if len(strings.TrimSpace(inferredRegistry)) != 0 {
 		registryURLFromStepConfig, err := url.ParseRequestURI(inferredRegistry)
 		if err != nil {
-			log(e, fmt.Sprintf("Invalid registry url specified: %s\n", err.Error()))
+			emit(e, fmt.Sprintf("Invalid registry url specified: %s\n", err.Error()))
 			if registryInferredFromRepository != "" {
-				log(e, fmt.Sprintf("Using registry url inferred from repository: %s\n"+registryInferredFromRepository))
+				emit(e, fmt.Sprintf("Using registry url inferred from repository: %s\n"+registryInferredFromRepository))
 				inferredRegistry = registryInferredFromRepository
 			} else {
-				log(e, "Please specify valid registry parameter.If you intended to use docker hub as registry, you may omit registry parameter")
+				emit(e, "Please specify valid registry parameter.If you intended to use docker hub as registry, you may omit registry parameter")
 				return "", "", fmt.Errorf("%s is not a valid registry URL, error: %s", inferredRegistry, err.Error())
 			}
 
@@ -711,13 +711,13 @@ func InferRegistryAndRepository(ctx context.Context, repository string, registry
 			domainFromRegistryURL := registryURLFromStepConfig.Host
 			if len(strings.TrimSpace(domainFromRepository)) != 0 && domainFromRepository != "docker.io" {
 				if domainFromRegistryURL != domainFromRepository {
-					log(e, "Different registry hosts specified in repository: "+domainFromRepository+" and registry: "+domainFromRegistryURL)
+					emit(e, "Different registry hosts specified in repository: "+domainFromRepository+" and registry: "+domainFromRegistryURL)
 					inferredRegistry = registryInferredFromRepository
-					log(e, "Using registry inferred from repository: "+inferredRegistry)
+					emit(e, "Using registry inferred from repository: "+inferredRegistry)
 				}
 			} else {
 				inferredRepository = domainFromRegistryURL + "/" + inferredRepository
-				log(e, "Using repository inferred from registry: "+inferredRepository)
+				emit(e, "Using repository inferred from registry: "+inferredRepository)
 			}
 
 		}
