@@ -43,7 +43,7 @@ type JSONMessageProcessor struct {
 // message and previous messages.
 func (s *JSONMessageProcessor) ProcessJSONMessage(m *jsonmessage.JSONMessage) (string, error) {
 	if m.Error != nil {
-		return m.ErrorMessage + "\n", m.Error
+		return "", m.Error
 	}
 
 	if m.Stream != "" {
