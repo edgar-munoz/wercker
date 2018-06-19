@@ -30,7 +30,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/codegangsta/cli"
 	"github.com/fsouza/go-dockerclient"
 	"github.com/mreiferson/go-snappystream"
 	"github.com/wercker/journalhook"
@@ -41,6 +40,7 @@ import (
 	"github.com/wercker/wercker/util"
 	"golang.org/x/net/context"
 	"golang.org/x/sys/unix"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 var (

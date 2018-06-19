@@ -23,8 +23,8 @@ import (
 	"text/tabwriter"
 	"text/template"
 
-	"github.com/codegangsta/cli"
 	"github.com/wercker/wercker/core"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 const docPath = "Documentation/command"
@@ -107,7 +107,7 @@ DESCRIPTION:
    {{.Description}}{{end}}{{if .Flags}}
 
 OPTIONS:
-{{range .Flags}}{{if not .IsHidden}}   {{. | shortFlag}}{{ "\n" }}{{end}}{{end}}{{end}}
+{{range .Flags}}{{if not .Hidden}}   {{. | shortFlag}}{{ "\n" }}{{end}}{{end}}{{end}}
 `
 	cli.AppHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
@@ -126,11 +126,11 @@ COMMANDS:
    {{range .Commands}}{{.Name}}{{with .ShortName}}, {{.}}{{end}}{{ "\t" }}{{.Usage}}
    {{end}}{{if .Flags}}
 GLOBAL OPTIONS:
-{{range .Flags}}{{if not .IsHidden}}   {{. | shortFlag}}{{ "\n" }}{{end}}{{end}}{{end}}
+{{range .Flags}}{{if not .Hidden}}   {{. | shortFlag}}{{ "\n" }}{{end}}{{end}}{{end}}
 `
 
-	cli.HelpPrinter = func(templ string, data interface{}) {
-		w := tabwriter.NewWriter(app.Writer, 0, 8, 1, '\t', 0)
+	cli.HelpPrinter = func(w io.Writer, templ string, data interface{}) {
+		writer := tabwriter.NewWriter(app.Writer, 0, 8, 1, '\t', 0)
 		t := template.Must(template.New("help").Funcs(
 			template.FuncMap{"shortFlag": shortFlag},
 		).Parse(templ))
@@ -138,7 +138,7 @@ GLOBAL OPTIONS:
 		if err != nil {
 			panic(err)
 		}
-		w.Flush()
+		writer.Flush()
 	}
 }
 

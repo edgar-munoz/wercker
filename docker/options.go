@@ -26,19 +26,21 @@ import (
 
 // DockerOptions for our docker client
 type Options struct {
-	Host              string
-	TLSVerify         string
-	CertPath          string
-	DNS               []string
-	Local             bool
-	CPUPeriod         int64
-	CPUQuota          int64
-	Memory            int64
-	MemoryReservation int64
-	MemorySwap        int64
-	KernelMemory      int64
-	CleanupImage      bool
-	NetworkName       string
+	Host                string
+	TLSVerify           string
+	CertPath            string
+	DNS                 []string
+	Local               bool
+	CPUPeriod           int64
+	CPUQuota            int64
+	Memory              int64
+	MemoryReservation   int64
+	MemorySwap          int64
+	KernelMemory        int64
+	CleanupImage        bool
+	NetworkName         string
+	RddServiceURI       string
+	RddProvisionTimeout time.Duration
 }
 
 func guessAndUpdateDockerOptions(ctx context.Context, opts *Options, e *util.Environment) {
@@ -124,21 +126,25 @@ func NewOptions(ctx context.Context, c util.Settings, e *util.Environment) (*Opt
 	dockerKernelMemory, _ := c.Int("docker-kernel-memory")
 	dockerCleanupImage, _ := c.Bool("docker-cleanup-image")
 	dockerNetworkName, _ := c.String("docker-network")
+	rddServiceURI, _ := c.String("rdd-service-uri")
+	rddProvisionTimeout, _ := c.Duration("rdd-provision-timeout")
 
 	speculativeOptions := &Options{
-		Host:              dockerHost,
-		TLSVerify:         dockerTLSVerify,
-		CertPath:          dockerCertPath,
-		DNS:               dockerDNS,
-		Local:             dockerLocal,
-		CPUPeriod:         int64(dockerCPUPeriod),
-		CPUQuota:          int64(dockerCPUQuota),
-		Memory:            int64(dockerMemory) * 1024 * 1024,
-		MemoryReservation: int64(dockerMemoryReservation) * 1024 * 1024,
-		MemorySwap:        int64(dockerMemorySwap) * 1024 * 1024,
-		KernelMemory:      int64(dockerKernelMemory) * 1024 * 1024,
-		CleanupImage:      dockerCleanupImage,
-		NetworkName:       dockerNetworkName,
+		Host:                dockerHost,
+		TLSVerify:           dockerTLSVerify,
+		CertPath:            dockerCertPath,
+		DNS:                 dockerDNS,
+		Local:               dockerLocal,
+		CPUPeriod:           int64(dockerCPUPeriod),
+		CPUQuota:            int64(dockerCPUQuota),
+		Memory:              int64(dockerMemory) * 1024 * 1024,
+		MemoryReservation:   int64(dockerMemoryReservation) * 1024 * 1024,
+		MemorySwap:          int64(dockerMemorySwap) * 1024 * 1024,
+		KernelMemory:        int64(dockerKernelMemory) * 1024 * 1024,
+		CleanupImage:        dockerCleanupImage,
+		NetworkName:         dockerNetworkName,
+		RddServiceURI:       rddServiceURI,
+		RddProvisionTimeout: rddProvisionTimeout,
 	}
 
 	// We're going to try out a few settings and set DockerHost if

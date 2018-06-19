@@ -24,7 +24,7 @@ package util
 import (
 	"time"
 
-	"github.com/codegangsta/cli"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 // Settings mathces the cli.Context interface so we can make a cheap

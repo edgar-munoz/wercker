@@ -523,15 +523,6 @@
 			"revisionTime": "2018-03-01T21:28:15Z"
 		},
 		{
-			"checksumSHA1": "OIMQkl9E8WtJhZvYkg4o5yOd5Sw=",
-			"origin": "github.com/wercker/codegangsta-cli",
-			"path": "github.com/codegangsta/cli",
-			"revision": "863dc328534d8e22f36386bce3da48dc572a8ddf",
-			"revisionTime": "2015-02-12T14:12:15Z",
-			"version": "hidden_flags",
-			"versionExact": "hidden_flags"
-		},
-		{
 			"checksumSHA1": "9UUP0nQdKxvJZOFg7e8FP4gzzgA=",
 			"path": "github.com/coreos/etcd/raft/raftpb",
 			"revision": "897cadc88c5f4b01a8df6b760ec4b68ff1ece842",
@@ -1348,10 +1339,16 @@
 			"revisionTime": "2017-08-15T08:56:58Z"
 		},
 		{
-			"checksumSHA1": "fbMBM0Rh4fH554O3fDMvXT5jnwo=",
+			"checksumSHA1": "IdGGufgi6cmmNWjt9bkFV99Hlh4=",
+			"path": "github.com/golang/protobuf/jsonpb",
+			"revision": "3a3da3a4e26776cc22a79ef46d5d58477532dede",
+			"revisionTime": "2018-05-22T22:42:51Z"
+		},
+		{
+			"checksumSHA1": "pMyj24fHq3hQd1dMVLXvBDPaMz0=",
 			"path": "github.com/golang/protobuf/proto",
-			"revision": "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175",
-			"revisionTime": "2018-02-02T18:43:18Z"
+			"revision": "3a3da3a4e26776cc22a79ef46d5d58477532dede",
+			"revisionTime": "2018-05-22T22:42:51Z"
 		},
 		{
 			"checksumSHA1": "qyalT+838zrkZMjOA62VGus0VcI=",
@@ -1390,10 +1387,16 @@
 			"revisionTime": "2018-02-02T18:43:18Z"
 		},
 		{
-			"checksumSHA1": "O2ItP5rmfrgxPufhjJXbFlXuyL8=",
+			"checksumSHA1": "QwgMLtaLi/6xHaNiDFwHN844AkI=",
+			"path": "github.com/golang/protobuf/ptypes/struct",
+			"revision": "3a3da3a4e26776cc22a79ef46d5d58477532dede",
+			"revisionTime": "2018-05-22T22:42:51Z"
+		},
+		{
+			"checksumSHA1": "FdeygjOuyR2p5v9b0kNOtzfpjS4=",
 			"path": "github.com/golang/protobuf/ptypes/timestamp",
-			"revision": "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175",
-			"revisionTime": "2018-02-02T18:43:18Z"
+			"revision": "05f48f4eaf0e05663b562bab533cdd472238ce29",
+			"revisionTime": "2018-06-06T20:26:30Z"
 		},
 		{
 			"checksumSHA1": "qp5RRqPMl2JcyB1fAKnU9ZwxVkc=",
@@ -1522,6 +1525,30 @@
 			"revisionTime": "2017-08-15T08:05:44Z"
 		},
 		{
+			"checksumSHA1": "zXn4DnI41yHyz/+qi46GwxfHtvs=",
+			"path": "github.com/grpc-ecosystem/grpc-gateway/runtime",
+			"revision": "a5b66c16bab6156b1cc525e76159bdff463123ba",
+			"revisionTime": "2018-05-17T19:03:18Z"
+		},
+		{
+			"checksumSHA1": "HV5bBOOPCOhO6SUMFIGW/M6vi+I=",
+			"path": "github.com/grpc-ecosystem/grpc-gateway/runtime/internal",
+			"revision": "a5b66c16bab6156b1cc525e76159bdff463123ba",
+			"revisionTime": "2018-05-17T19:03:18Z"
+		},
+		{
+			"checksumSHA1": "CKrlwtWMXiznQrgS2o/obvP7HTM=",
+			"path": "github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis/google/api",
+			"revision": "4539fc575ec06dbbddc6975e7e8b503260270c3c",
+			"revisionTime": "2017-05-01T05:22:36Z"
+		},
+		{
+			"checksumSHA1": "wo1YltMuyBtAZTKC5yvdVnYB1oA=",
+			"path": "github.com/grpc-ecosystem/grpc-gateway/utilities",
+			"revision": "a5b66c16bab6156b1cc525e76159bdff463123ba",
+			"revisionTime": "2018-05-17T19:03:18Z"
+		},
+		{
 			"checksumSHA1": "Uzyon2091lmwacNsl1hCytjhHtg=",
 			"path": "github.com/hashicorp/go-cleanhttp",
 			"revision": "ad28ea4487f05916463e2423a55166280e8254b5",
@@ -1628,6 +1655,12 @@
 			"path": "github.com/mreiferson/go-snappystream/snappy-go",
 			"revision": "028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504",
 			"revisionTime": "2015-04-16T23:44:20Z"
+		},
+		{
+			"checksumSHA1": "JZWMiL1gEDlMN5l1MBW5INOwhwc=",
+			"path": "github.com/mwitkow/go-grpc-middleware",
+			"revision": "e9c5d9645c437ab1b204cff969a2c0fb16cd4276",
+			"revisionTime": "2018-05-22T10:52:15Z"
 		},
 		{
 			"checksumSHA1": "I/ZY7LHsGvuDx4ApgLzWpW0sz8s=",
@@ -2104,6 +2137,12 @@
 			"revisionTime": "2017-07-17T18:23:50Z"
 		},
 		{
+			"checksumSHA1": "jtXdKs1ERw05BWF1scVY+9DmmII=",
+			"path": "github.com/wercker/pkg/log",
+			"revision": "8f5141c76788eea5b8c0856d019565167246ec62",
+			"revisionTime": "2018-04-28T04:15:48Z"
+		},
+		{
 			"checksumSHA1": "zmX+YoQS0YIcSDUg0y9BVLI0BMU=",
 			"path": "github.com/wercker/reporter-client",
 			"revision": "f52a96cebbe069791dbb890f534bdf0a51b727a9",
@@ -2452,6 +2491,12 @@
 			"revisionTime": "2017-10-31T19:43:29Z"
 		},
 		{
+			"checksumSHA1": "m1d4DsEkn6fuFF4b4O1ALS65yrk=",
+			"path": "google.golang.org/genproto/googleapis/api/annotations",
+			"revision": "81158efcc9f219c511e4d3c0d61a0e6e49c01a24",
+			"revisionTime": "2018-06-01T22:35:52Z"
+		},
+		{
 			"checksumSHA1": "AvVpgwhxhJgjoSledwDtYrEKVE4=",
 			"path": "google.golang.org/genproto/googleapis/rpc/status",
 			"revision": "ee236bd376b077c7a89f260c026c4735b195e459",
@@ -2482,10 +2527,10 @@
 			"revisionTime": "2017-04-28T21:33:45Z"
 		},
 		{
-			"checksumSHA1": "3Lt5hNAG8qJAYSsNghR5uA1zQns=",
+			"checksumSHA1": "KYyKbsdKoWoANOXfTTFJhI31Rao=",
 			"path": "google.golang.org/grpc/grpclog",
-			"revision": "d2e1b51f33ff8c5e4a15560ff049d200e83726c5",
-			"revisionTime": "2017-04-28T21:33:45Z"
+			"revision": "590da37e2dfb4705d8ebd9574ce4cb75295d9674",
+			"revisionTime": "2018-05-29T21:11:52Z"
 		},
 		{
 			"checksumSHA1": "T3Q0p8kzvXFnRkMaK/G8mCv6mc0=",
@@ -2530,10 +2575,10 @@
 			"revisionTime": "2017-04-28T21:33:45Z"
 		},
 		{
-			"checksumSHA1": "6W28yHVCwKk+fVvVgK4IQLrMcFU=",
+			"checksumSHA1": "uJmKrB/CnyxuBMQ3yxDfwxy2qvg=",
 			"path": "google.golang.org/grpc/status",
-			"revision": "d2e1b51f33ff8c5e4a15560ff049d200e83726c5",
-			"revisionTime": "2017-04-28T21:33:45Z"
+			"revision": "590da37e2dfb4705d8ebd9574ce4cb75295d9674",
+			"revisionTime": "2018-05-29T21:11:52Z"
 		},
 		{
 			"checksumSHA1": "N0TftT6/CyWqp6VRi2DqDx60+Fo=",
@@ -2588,6 +2633,24 @@
 			"path": "gopkg.in/gemnasium/logrus-airbrake-hook.v2",
 			"revision": "e928b033a891c0175fb643d5aa0779e86325eb12",
 			"revisionTime": "2017-06-01T21:22:28Z"
+		},
+		{
+			"checksumSHA1": "+mZKlPX9t4fHOQvkQeCnWw5JjkQ=",
+			"path": "gopkg.in/mgo.v2/bson",
+			"revision": "3f83fa5005286a7fe593b055f0d7771a7dce4655",
+			"revisionTime": "2016-08-18T02:01:20Z"
+		},
+		{
+			"checksumSHA1": "trGhCcEZSOZTwlLfWCRAoXXihW8=",
+			"path": "gopkg.in/mgo.v2/internal/json",
+			"revision": "3f83fa5005286a7fe593b055f0d7771a7dce4655",
+			"revisionTime": "2016-08-18T02:01:20Z"
+		},
+		{
+			"checksumSHA1": "G+sUW3pSzAPxWuYlNWhJodyQVTY=",
+			"path": "gopkg.in/urfave/cli.v1",
+			"revision": "cfb38830724cc34fedffe9a2a29fb54fa9169cd1",
+			"revisionTime": "2017-08-11T01:42:03Z"
 		},
 		{
 			"checksumSHA1": "orryOwzzDA/WtXbvrmVC2ikpEis=",
