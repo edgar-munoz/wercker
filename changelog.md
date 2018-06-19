@@ -1,6 +1,6 @@
 ## unreleased
 
-## v1.0.1265 (2015-06-18)
+## v1.0.1265 (2015-06-19)
 
 - Fix wercker --help for subcommands(#432)
 
