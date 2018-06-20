@@ -16,6 +16,7 @@ package rdd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -26,7 +27,7 @@ import (
 	"github.com/wercker/pkg/log"
 	rddpb "github.com/wercker/wercker/rddpb"
 	"google.golang.org/grpc"
-	"gopkg.in/urfave/cli.v1"
+	cli "gopkg.in/urfave/cli.v1"
 )
 
 const (
@@ -133,7 +134,7 @@ func (rdd *RDD) Provision(ctx context.Context) (string, error) {
 					return "", cli.NewExitError(errMsg, 1)
 				}
 				rdd.rddDetails = &rddDetails{rddProvisionRequestID: rddResponseID, rddURI: rddURI}
-				err := rdd.verify(ctx)
+				err := verify(ctx, rdd.rddDetails)
 				if err != nil {
 					return "", err
 				}
@@ -156,25 +157,42 @@ func (rdd *RDD) Deprovision() {
 	}
 }
 
-//verify - verify the RDD url by executing 	docker --version command
-func (rdd *RDD) verify(ctx context.Context) error {
-	rddURI := rdd.rddDetails.rddURI
-	dockerClient, err := client.NewClientWithOpts(client.WithHost(rddURI))
-	if err != nil {
-		return fmt.Errorf(`Unable to create a docker client with RDD URI: %s, Error: %s`, rddURI, err.Error())
-	}
-	version, err := dockerClient.ServerVersion(ctx)
-	if err != nil {
-		if reflect.TypeOf(err).String() == "client.errConnectionFailed" {
-			return fmt.Errorf(`RDD URL %s does not point to a working Docker environment or wercker can't connect to the Docker endpoint, Error: 
-			%s`, rddURI, err.Error())
+// verify the RDD url by connecting to it and retrieving its version
+func verify(ctx context.Context, rddDetails *rddDetails) error {
+	maxRetries := 5
+	try := 0
+	rddURI := rddDetails.rddURI
+
+	for try < maxRetries {
+		try++
+
+		dockerClient, err := client.NewClientWithOpts(client.WithHost(rddURI))
+		if err != nil {
+			return fmt.Errorf(`Unable to create a docker client with RDD URI: %s, Error: %s`, rddURI, err.Error())
 		}
-		return err
-	}
-	if version.Version == "" {
-		return fmt.Errorf(`Unidentifiable docker version at RDD URI: %s
+
+		version, err := dockerClient.ServerVersion(ctx)
+		if err != nil {
+			if reflect.TypeOf(err).String() == "client.errConnectionFailed" {
+				log.Debug("Unable to connect to Docker daemon, retying")
+				time.Sleep(time.Second * 5)
+				continue
+			}
+
+			return err
+		}
+
+		if version.Version == "" {
+			return fmt.Errorf(`Unidentifiable docker version at RDD URI: %s
 			`, rddURI)
+		}
+
+		log.Info(fmt.Sprintf("Successfully connected to RDD at %s, Docker version: %s, Docker API version: %s", rddURI, version.Version, version.APIVersion))
+
+		return nil
 	}
-	log.Info(fmt.Sprintf("Successfully connected to RDD at %s, Docker version: %s, Docker API version: %s", rddURI, version.Version, version.APIVersion))
-	return nil
+
+	log.Warn("Tries exceeds max tries, aborting")
+
+	return errors.New("unable to connect to remote Docker daemon, tries exceeded max tries")
 }
